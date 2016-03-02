@@ -1,22 +1,6 @@
 import cv2
 import numpy as np
-import Tkinter as tk
-
-spinlab = cv2.imread('spinlogo.png')
-
-vid = cv2.VideoCapture('/Users/sammay/Desktop/SPINLab/DigiRo/DigiRo-Movies/GoPro_0RPM_JAroll2.mov')
-numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
-width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
-height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-#fps = (vid.get(cv2.cv.CV_CAP_PROP_FPS))
-fps = 29.97
-fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
-video_writer = cv2.VideoWriter('/Users/sammay/Desktop/SPINLab/DigiRo/DigiRo-Movies/output.avi', fourcc, fps, (width, height))
-
-physicalRPM = 0
-digiRPM = -10
-dtheta = digiRPM*(6/fps)
-per = 60*(1 / np.abs(float(digiRPM)))
+from Tkinter import *
 
 def centerClick(event, x, y, flags, param):
     global center, frame
@@ -105,34 +89,78 @@ def annotateImg(img, i):
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
 
-npts = 0
+def start():
+    vid = cv2.VideoCapture(filenameVar.get())
 
-#frames = np.empty(numFrames, dtype = list)
+    global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
+    npts = 0
+    spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
+    numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+    width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
+    height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+    #fps = (vid.get(cv2.cv.CV_CAP_PROP_FPS))
+    fps = 29.97
+    fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
+    video_writer = cv2.VideoWriter('/Users/sammay/Desktop/SPINLab/DigiRo/DigiRo-Movies/output.avi', fourcc, fps, (width, height))
 
-# Open first frame from video, user will click on center
-ret, frame = vid.read()
-cv2.namedWindow('CenterClick')
-cv2.setMouseCallback('CenterClick', circumferencePoints)
+    global physicalRPM, digiRPM, dtheta, per
+    physicalRPM = physRPMVar.get()
+    digiRPM = digiRPMVar.get()
+    dtheta = digiRPM*(6/fps)
+    per = 60*(1 / np.abs(float(digiRPM)))
 
-cv2.imshow('CenterClick', frame)
-cv2.waitKey(0)
+    # Close GUI window so rest of program can run
+    root.destroy()
 
-for i in range(350):
-    ret, frame = vid.read() # read next frame from video
+    global frame, center
+    
+    # Open first frame from video, user will click on center
+    ret, frame = vid.read()
+    cv2.namedWindow('CenterClick')
+    cv2.setMouseCallback('CenterClick', circumferencePoints)
 
-    M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
-    rotated = cv2.warpAffine(frame, M, (width, height))
-    cv2.fillPoly(rotated, np.array([poly1, poly2]), 0)
-    cv2.circle(rotated, center, 4, (255,0,0), -1)
-    centered = centerImg(rotated, center[0], center[1])
+    cv2.imshow('CenterClick', frame)
+    cv2.waitKey(0)
+
+    for i in range(50):
+        ret, frame = vid.read() # read next frame from video
+
+        M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
+        rotated = cv2.warpAffine(frame, M, (width, height))
+        cv2.fillPoly(rotated, np.array([poly1, poly2]), 0)
+        cv2.circle(rotated, center, 4, (255,0,0), -1)
+        centered = centerImg(rotated, center[0], center[1])
     
     
-    centered = cv2.resize(centered,(width,height), interpolation = cv2.INTER_CUBIC)
-    annotateImg(centered, i)
-    video_writer.write(centered)
-    print i
+        centered = cv2.resize(centered,(width,height), interpolation = cv2.INTER_CUBIC)
+        annotateImg(centered, i)
+        video_writer.write(centered)
+        print i
 
 
-cv2.destroyAllWindows()
-vid.release()
-video_writer.release()
+    cv2.destroyAllWindows()
+    vid.release()
+    video_writer.release()
+
+root = Tk()
+root.title('DigiPyRo')
+startButton = Button(root, text = "Start!", command = start)
+startButton.grid(row=3, column=0)
+digiRPMVar = DoubleVar()
+physRPMVar = DoubleVar()
+digiRPMEntry = Entry(root, textvariable=digiRPMVar)
+physRPMEntry = Entry(root, textvariable=physRPMVar)
+digiLabel = Label(root, text="Please enter desired digital rotation (RPM).")
+physLabel = Label(root, text="Please enter physical rotation (RPM).")
+digiRPMEntry.grid(row=1, column=1)
+physRPMEntry.grid(row=0, column=1)
+digiLabel.grid(row=1, column=0)
+physLabel.grid(row=0, column=0)
+
+filenameVar = StringVar()
+filenameEntry = Entry(root, textvariable = filenameVar)
+filenameLabel = Label(root, text="Specify full path to movie.")
+filenameEntry.grid(row=2, column=1)
+filenameLabel.grid(row=2, column=0)
+
+root.mainloop()
