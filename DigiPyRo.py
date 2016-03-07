@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from Tkinter import *
 
+
 def centerClick(event, x, y, flags, param):
     global center, frame
     clone = frame.copy()
@@ -16,6 +17,20 @@ def centerImg(img, x_c, y_c): # shifts image so that it is centered at (x_c, y_c
     dy = (height/2) - y_c
     shiftMatrix = np.float32([[1, 0, dx], [0, 1, dy]])
     return cv2.warpAffine(img, shiftMatrix, (width, height))
+
+def locate(event, x, y, flags, param):
+    global frame, particleStart, particleEnd, particleCenter, particleRadius
+    clone = frame.copy()
+    if event == cv2.EVENT_LBUTTONDOWN:
+        particleStart = (x,y)
+    elif event == cv2.EVENT_LBUTTONUP:
+        particleEnd = (x,y)
+        particleCenter = ((particleEnd[0] + particleStart[0])/2, (particleEnd[1] + particleStart[1])/2)
+        d2 = ((particleEnd[0] - particleStart[0])**2) + ((particleEnd[1] - particleStart[1])**2)
+        particleRadius = (d2**(0.5))/2
+        cv2.circle(frame, particleCenter, int(particleRadius+0.5), (255,0,0), 1)
+        cv2.imshow('Locate Ball', frame)
+        frame = clone.copy() # resets to original image
 
 def circumferencePoints(event, x, y, flags, param):
     global npts, center, frame, xpoints, ypoints, r, poly1, poly2
@@ -63,16 +78,18 @@ def annotateImg(img, i):
     font = cv2.FONT_HERSHEY_TRIPLEX
 
     dpro = 'DigiPyRo'
-    dproLoc = (width-200, height-(50+spinlab.shape[0]))
+    dproLoc = (25, 50)
     cv2.putText(img, dpro, dproLoc, font, 1, (255, 255, 255), 1)
     
-    img[(height-25)-spinlab.shape[0]:height-25, (width-25)-spinlab.shape[1]:width-25] = spinlab
+    #img[(height-25)-spinlab.shape[0]:height-25, (width-25)-spinlab.shape[1]:width-25] = spinlab
+    img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
 
-    perStamp = 'Period (T): ' + str(round(per,1)) + ' s'
-    perLoc = (25, height-75)
-    cv2.putText(img, perStamp, perLoc, font, 1, (255, 255, 255), 1)
-    timestamp = 'Time: ' + str(round(((i/fps)/per),1)) + ' T'
-    tLoc = (25, height-25)
+    #perStamp = 'Period (T): ' + str(round(per,1)) + ' s'
+    #perLoc = (25, height-75)
+    #cv2.putText(img, perStamp, perLoc, font, 1, (255, 255, 255), 1)
+    #timestamp = 'Time: ' + str(round(((i/fps)/per),1)) + ' T'
+    timestamp = 'Time: ' + str(round((i/fps),1)) + ' s'
+    tLoc = (width - 225, height-25)
     cv2.putText(img, timestamp, tLoc, font, 1, (255, 255, 255), 1)
 
     prpm = 'Physical Rotation: '
@@ -84,8 +101,8 @@ def annotateImg(img, i):
     if (digiRPM > 0):
         drpm += '+'
     drpm += str(digiRPM) + 'RPM'
-    pLoc = (25, 75)
-    dLoc = (25, 125)
+    pLoc = (25, height - 25)
+    dLoc = (25, height - 75)
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
 
@@ -95,13 +112,14 @@ def start():
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
     npts = 0
     spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
+    #spinlab = cv2.resize(spinlab,spinlab.shape, interpolation = cv2.INTER_CUBIC)
     numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     #fps = (vid.get(cv2.cv.CV_CAP_PROP_FPS))
     fps = 29.97
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
-    video_writer = cv2.VideoWriter('/Users/sammay/Desktop/SPINLab/DigiRo/DigiRo-Movies/output.avi', fourcc, fps, (width, height))
+    video_writer = cv2.VideoWriter(savefileVar.get(), fourcc, fps, (width, height))
 
     global physicalRPM, digiRPM, dtheta, per
     physicalRPM = physRPMVar.get()
@@ -109,20 +127,40 @@ def start():
     dtheta = digiRPM*(6/fps)
     per = 60*(1 / np.abs(float(digiRPM)))
 
+    startFrame = fps*startTimeVar.get()
+    numFrames = int(fps*(endTimeVar.get() - startTimeVar.get()))
+
     # Close GUI window so rest of program can run
     root.destroy()
 
     global frame, center
     
     # Open first frame from video, user will click on center
+    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
     ret, frame = vid.read()
     cv2.namedWindow('CenterClick')
     cv2.setMouseCallback('CenterClick', circumferencePoints)
 
     cv2.imshow('CenterClick', frame)
     cv2.waitKey(0)
+    cv2.destroyWindow('CenterClick')
 
-    for i in range(50):
+    # Select initial position of ball
+    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+    ret, frame = vid.read()
+    cv2.namedWindow('Locate Ball')
+    cv2.setMouseCallback('Locate Ball', locate)
+
+    cv2.imshow('Locate Ball', frame)
+    cv2.waitKey(0)
+    cv2.destroyWindow('Locate Ball')
+
+
+    t = np.empty(numFrames)
+    ballX = np.empty(numFrames)
+    ballY = np.empty(numFrames)
+    ballPts = 0 #will identify the number of times that Hough Circle transform identifies the ball
+    for i in range(numFrames):
         ret, frame = vid.read() # read next frame from video
 
         M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
@@ -133,11 +171,26 @@ def start():
     
     
         centered = cv2.resize(centered,(width,height), interpolation = cv2.INTER_CUBIC)
+        gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY)
+        gray = cv2.medianBlur(gray,5)
+        ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=20, minRadius = int(particleRadius * 0.7), maxRadius = int(particleRadius * 1.3))
+        if type(ballLoc) != NoneType :
+            for j in ballLoc[0,:]:
+                cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
+                cv2.circle(centered, (j[0],j[1]), 2, (0,0,255), -1)
+                ballX[ballPts] = j[0]
+                ballY[ballPts] = j[1]
+	    t[ballPts] = i*fps      
+            ballPts += 1
+        for k in range(ballPts-1):
+            cv2.circle(centered, (int(ballX[k]), int(ballY[k])), 1, (255,0,0), -1)    	
+
+
         annotateImg(centered, i)
         video_writer.write(centered)
-        print i
 
-
+    ballX -= center[0]
+    ballY -= center[1]    
     cv2.destroyAllWindows()
     vid.release()
     video_writer.release()
@@ -145,7 +198,7 @@ def start():
 root = Tk()
 root.title('DigiPyRo')
 startButton = Button(root, text = "Start!", command = start)
-startButton.grid(row=3, column=0)
+startButton.grid(row=5, column=0)
 digiRPMVar = DoubleVar()
 physRPMVar = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
@@ -162,5 +215,20 @@ filenameEntry = Entry(root, textvariable = filenameVar)
 filenameLabel = Label(root, text="Specify full path to movie.")
 filenameEntry.grid(row=2, column=1)
 filenameLabel.grid(row=2, column=0)
+
+savefileVar = StringVar()
+savefileEntry = Entry(root, textvariable = savefileVar)
+savefileLabel = Label(root, text="Save DigiPyRo-ed video as:")
+savefileEntry.grid(row=3, column=1)
+savefileLabel.grid(row=3, column=0)
+
+startTimeVar = DoubleVar()
+endTimeVar = DoubleVar()
+startTimeEntry = Entry(root, textvariable = startTimeVar)
+endTimeEntry = Entry(root, textvariable = endTimeVar)
+startTimeLabel = Label(root, text="Select start and end times (in seconds)")
+startTimeLabel.grid(row=4, column=0)
+startTimeEntry.grid(row=4, column=1)
+endTimeEntry.grid(row=4, column=2)
 
 root.mainloop()
