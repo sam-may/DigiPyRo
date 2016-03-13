@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 from Tkinter import *
-
+import matplotlib
+matplotlib.use("Agg")
+from matplotlib import pyplot as plt
+import scipy as sp
+from scipy.optimize import leastsq
 
 def centerClick(event, x, y, flags, param):
     global center, frame
@@ -106,6 +110,54 @@ def annotateImg(img, i):
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
 
+def errFunc(params, data):
+    model = params[0] + (params[1]*np.exp(-data[0]/params[3])*np.cos((2*data[2]*data[0])-params[2]))
+    return model - data[1]
+
+def fitData(data):
+    result = sp.optimize.leastsq(errFunc, np.array([0,1,0,3]), args=(data), full_output=1)
+    return result[0]
+
+def createModel(bestfit, t, omega):
+    return bestfit[0] + (bestfit[1]*np.exp(-t/bestfit[3])*np.cos((2*omega*t)-bestfit[2]))
+
+def errFuncPolar(params, data):
+    model = np.abs(params[0]*np.exp(-data[0]*data[2]*params[1])*np.cos((data[2]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
+    return model - data[1]
+
+def fitDataPolar(data):
+    result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0]), args=(data), full_output=1)
+    return result[0]
+
+def createModelPolar(bestfit, t, omega):
+    return np.abs(bestfit[0]*np.exp(-t*omega*bestfit[1])*np.cos((omega*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
+
+def createModelTheta(t, omega, bestfit, thetai, rot):
+    wd = omega * ((1 - (bestfit[1])**2)**(0.5))
+    period = (2*np.pi)/wd
+    phi = bestfit[2]
+    rot *= -(2*np.pi)/60
+    theta = np.ones(len(t))*thetai
+    for i in range(len(t)):
+        periodicTime = t[i] - ((period)*int(t[i]/period))
+        phase = (periodicTime / period) * 2*np.pi
+        if phase < (np.pi/2 + phi):
+            theta[i] = thetai
+        elif phase > (np.pi/2 + phi) and phase < (3*np.pi/2 + phi):
+            theta[i] = thetai + np.pi
+        elif phase > (3*np.pi/2 + phi):
+            theta[i] = thetai
+        theta[i] += periodicTime*rot
+        
+        if theta[i] > np.pi:
+           theta[i] -= 2*np.pi
+        elif theta[i] < -np.pi:
+           theta[i] += 2*np.pi
+
+    return theta
+
+    
+
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
 
@@ -113,7 +165,7 @@ def start():
     npts = 0
     spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
     #spinlab = cv2.resize(spinlab,spinlab.shape, interpolation = cv2.INTER_CUBIC)
-    numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+    #numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     #fps = (vid.get(cv2.cv.CV_CAP_PROP_FPS))
@@ -160,6 +212,8 @@ def start():
     ballX = np.empty(numFrames)
     ballY = np.empty(numFrames)
     ballPts = 0 #will identify the number of times that Hough Circle transform identifies the ball
+    lastLoc = particleCenter
+    thresh = 50
     for i in range(numFrames):
         ret, frame = vid.read() # read next frame from video
 
@@ -173,15 +227,19 @@ def start():
         centered = cv2.resize(centered,(width,height), interpolation = cv2.INTER_CUBIC)
         gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray,5)
-        ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=20, minRadius = int(particleRadius * 0.7), maxRadius = int(particleRadius * 1.3))
+        ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=15, minRadius = int(particleRadius * 0.7), maxRadius = int(particleRadius * 1.3))
         if type(ballLoc) != NoneType :
             for j in ballLoc[0,:]:
-                cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
-                cv2.circle(centered, (j[0],j[1]), 2, (0,0,255), -1)
-                ballX[ballPts] = j[0]
-                ballY[ballPts] = j[1]
-	    t[ballPts] = i*fps      
-            ballPts += 1
+                if (np.abs(j[0] - lastLoc[0]) < thresh) and (np.abs(j[1] - lastLoc[1]) < thresh):    
+                    cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
+                    cv2.circle(centered, (j[0],j[1]), 2, (0,0,255), -1)
+                    ballX[ballPts] = j[0]
+                    ballY[ballPts] = j[1]
+	            t[ballPts] = i/fps
+                    lastLoc = np.array([j[0],j[1]])      
+                    ballPts += 1
+                    break
+           
         for k in range(ballPts-1):
             cv2.circle(centered, (int(ballX[k]), int(ballY[k])), 1, (255,0,0), -1)    	
 
@@ -189,8 +247,53 @@ def start():
         annotateImg(centered, i)
         video_writer.write(centered)
 
+    ballX = ballX[0:ballPts]
+    ballY = ballY[0:ballPts]
+    t = t[0:ballPts]
     ballX -= center[0]
-    ballY -= center[1]    
+    ballY -= center[1]
+    
+    ballR = ((ballX**2)+(ballY**2))**(0.5)
+    ballTheta = np.arctan2(ballY, ballX)
+
+    omega = (np.pi)/3
+    dataFitR = fitDataPolar(np.array([t, ballR, omega]))
+    print dataFitR
+    modelR = createModelPolar(dataFitR, t, omega)
+    modelTheta = createModelTheta(t, omega, dataFitR, ballTheta[0], digiRPM + physicalRPM)
+    plt.figure(2)
+    plt.subplot(211)
+    plt.plot(t, ballR, 'r1')
+    plt.plot(t, modelR, 'b')
+    plt.xlabel(r"$t$ (s)")
+    plt.ylabel(r"$r$")
+
+    plt.subplot(212)
+    plt.plot(t, ballTheta, 'r1')
+    plt.plot(t, modelTheta, 'b')
+    plt.xlabel(r"$t$ (s)")
+    plt.ylabel(r"$\theta$")
+    plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/polar.pdf', format = 'pdf', dpi = 1200)
+
+    #dataFitX = fitData(np.array([t, ballX, omega]))
+    #modelX = createModel(dataFitX, t, omega)
+    #dataFitY = fitData(np.array([t, ballY, omega]))
+    #modelY = createModel(dataFitY, t, omega)
+    modelX = modelR*np.cos(modelTheta)
+    modelY = modelR*np.sin(modelTheta)
+
+    plt.figure(1)
+    plt.subplot(211)
+    plt.plot(t, ballX, 'r1')
+    plt.plot(t, modelX, 'r')
+    plt.xlabel(r"$t$ (s)")
+    plt.ylabel(r"$x$")
+    plt.subplot(212)
+    plt.plot(t, ballY, 'b1')
+    plt.plot(t, modelY, 'b')
+    plt.xlabel(r"$t$ (s)")
+    plt.ylabel(r"$y$")
+    plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/test.pdf', format = 'pdf', dpi =1200)   
     cv2.destroyAllWindows()
     vid.release()
     video_writer.release()
@@ -218,7 +321,7 @@ filenameLabel.grid(row=2, column=0)
 
 savefileVar = StringVar()
 savefileEntry = Entry(root, textvariable = savefileVar)
-savefileLabel = Label(root, text="Save DigiPyRo-ed video as:")
+savefileLabel = Label(root, text="Save output video as:")
 savefileEntry.grid(row=3, column=1)
 savefileLabel.grid(row=3, column=0)
 
