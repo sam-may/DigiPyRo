@@ -110,17 +110,6 @@ def annotateImg(img, i):
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
 
-def errFunc(params, data):
-    model = params[0] + (params[1]*np.exp(-data[0]/params[3])*np.cos((2*data[2]*data[0])-params[2]))
-    return model - data[1]
-
-def fitData(data):
-    result = sp.optimize.leastsq(errFunc, np.array([0,1,0,3]), args=(data), full_output=1)
-    return result[0]
-
-def createModel(bestfit, t, omega):
-    return bestfit[0] + (bestfit[1]*np.exp(-t/bestfit[3])*np.cos((2*omega*t)-bestfit[2]))
-
 def errFuncPolar(params, data):
     model = np.abs(params[0]*np.exp(-data[0]*data[2]*params[1])*np.cos((data[2]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
     return model - data[1]
@@ -181,6 +170,7 @@ def start():
 
     startFrame = fps*startTimeVar.get()
     numFrames = int(fps*(endTimeVar.get() - startTimeVar.get()))
+    trackBall = trackVar.get()
 
     # Close GUI window so rest of program can run
     root.destroy()
@@ -225,75 +215,75 @@ def start():
     
     
         centered = cv2.resize(centered,(width,height), interpolation = cv2.INTER_CUBIC)
-        gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY)
-        gray = cv2.medianBlur(gray,5)
-        ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=15, minRadius = int(particleRadius * 0.7), maxRadius = int(particleRadius * 1.3))
-        if type(ballLoc) != NoneType :
-            for j in ballLoc[0,:]:
-                if (np.abs(j[0] - lastLoc[0]) < thresh) and (np.abs(j[1] - lastLoc[1]) < thresh):    
-                    cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
-                    cv2.circle(centered, (j[0],j[1]), 2, (0,0,255), -1)
-                    ballX[ballPts] = j[0]
-                    ballY[ballPts] = j[1]
-	            t[ballPts] = i/fps
-                    lastLoc = np.array([j[0],j[1]])      
-                    ballPts += 1
-                    break
+        
+        if trackBall:
+            gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY)
+            gray = cv2.medianBlur(gray,5)
+            ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=15, minRadius = int(particleRadius * 0.7), maxRadius = int(particleRadius * 1.3))
+            if type(ballLoc) != NoneType :
+                for j in ballLoc[0,:]:
+                    if (np.abs(j[0] - lastLoc[0]) < thresh) and (np.abs(j[1] - lastLoc[1]) < thresh):    
+                        cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
+                        cv2.circle(centered, (j[0],j[1]), 2, (0,0,255), -1)
+                        ballX[ballPts] = j[0]
+                        ballY[ballPts] = j[1]
+	                t[ballPts] = i/fps
+                        lastLoc = np.array([j[0],j[1]])      
+                        ballPts += 1
+                        break
            
-        for k in range(ballPts-1):
-            cv2.circle(centered, (int(ballX[k]), int(ballY[k])), 1, (255,0,0), -1)    	
+            for k in range(ballPts-1):
+                cv2.circle(centered, (int(ballX[k]), int(ballY[k])), 1, (255,0,0), -1)    	
 
 
         annotateImg(centered, i)
         video_writer.write(centered)
 
-    ballX = ballX[0:ballPts]
-    ballY = ballY[0:ballPts]
-    t = t[0:ballPts]
-    ballX -= center[0]
-    ballY -= center[1]
+    if trackBall:
+        ballX = ballX[0:ballPts]
+        ballY = ballY[0:ballPts]
+        t = t[0:ballPts]
+        ballX -= center[0]
+        ballY -= center[1]
     
-    ballR = ((ballX**2)+(ballY**2))**(0.5)
-    ballTheta = np.arctan2(ballY, ballX)
+        ballR = ((ballX**2)+(ballY**2))**(0.5)
+        ballTheta = np.arctan2(ballY, ballX)
 
-    omega = (np.pi)/3
-    dataFitR = fitDataPolar(np.array([t, ballR, omega]))
-    print dataFitR
-    modelR = createModelPolar(dataFitR, t, omega)
-    modelTheta = createModelTheta(t, omega, dataFitR, ballTheta[0], digiRPM + physicalRPM)
-    plt.figure(2)
-    plt.subplot(211)
-    plt.plot(t, ballR, 'r1')
-    plt.plot(t, modelR, 'b')
-    plt.xlabel(r"$t$ (s)")
-    plt.ylabel(r"$r$")
+        omega = (np.pi)/3
+        dataFitR = fitDataPolar(np.array([t, ballR, omega]))
+        print dataFitR
+        modelR = createModelPolar(dataFitR, t, omega)
+        modelTheta = createModelTheta(t, omega, dataFitR, ballTheta[0], digiRPM + physicalRPM)
+        plt.figure(2)
+        plt.subplot(211)
+        plt.plot(t, ballR, 'r1')
+        plt.plot(t, modelR, 'b')
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$r$")
 
-    plt.subplot(212)
-    plt.plot(t, ballTheta, 'r1')
-    plt.plot(t, modelTheta, 'b')
-    plt.xlabel(r"$t$ (s)")
-    plt.ylabel(r"$\theta$")
-    plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/polar.pdf', format = 'pdf', dpi = 1200)
+        plt.subplot(212)
+        plt.plot(t, ballTheta, 'r1')
+        plt.plot(t, modelTheta, 'b')
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$\theta$")
+        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/polar.pdf', format = 'pdf', dpi = 1200)
 
-    #dataFitX = fitData(np.array([t, ballX, omega]))
-    #modelX = createModel(dataFitX, t, omega)
-    #dataFitY = fitData(np.array([t, ballY, omega]))
-    #modelY = createModel(dataFitY, t, omega)
-    modelX = modelR*np.cos(modelTheta)
-    modelY = modelR*np.sin(modelTheta)
+        modelX = modelR*np.cos(modelTheta)
+        modelY = modelR*np.sin(modelTheta)
 
-    plt.figure(1)
-    plt.subplot(211)
-    plt.plot(t, ballX, 'r1')
-    plt.plot(t, modelX, 'r')
-    plt.xlabel(r"$t$ (s)")
-    plt.ylabel(r"$x$")
-    plt.subplot(212)
-    plt.plot(t, ballY, 'b1')
-    plt.plot(t, modelY, 'b')
-    plt.xlabel(r"$t$ (s)")
-    plt.ylabel(r"$y$")
-    plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/test.pdf', format = 'pdf', dpi =1200)   
+        plt.figure(1)
+        plt.subplot(211)
+        plt.plot(t, ballX, 'r1')
+        plt.plot(t, modelX, 'k')
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$x$")
+        plt.subplot(212)
+        plt.plot(t, ballY, 'b1')
+        plt.plot(t, modelY, 'k')
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$y$")
+        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/test.pdf', format = 'pdf', dpi =1200)   
+    
     cv2.destroyAllWindows()
     vid.release()
     video_writer.release()
@@ -333,5 +323,9 @@ startTimeLabel = Label(root, text="Select start and end times (in seconds)")
 startTimeLabel.grid(row=4, column=0)
 startTimeEntry.grid(row=4, column=1)
 endTimeEntry.grid(row=4, column=2)
+
+trackVar = BooleanVar()
+trackEntry = Checkbutton(root, text="Track Ball", variable=trackVar)
+trackEntry.grid(row=3, column=2)
 
 root.mainloop()
