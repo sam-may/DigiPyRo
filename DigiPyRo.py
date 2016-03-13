@@ -157,8 +157,7 @@ def start():
     #numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-    #fps = (vid.get(cv2.cv.CV_CAP_PROP_FPS))
-    fps = 29.97
+    fps = fpsVar.get()
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
     video_writer = cv2.VideoWriter(savefileVar.get(), fourcc, fps, (width, height))
 
@@ -291,7 +290,7 @@ def start():
 root = Tk()
 root.title('DigiPyRo')
 startButton = Button(root, text = "Start!", command = start)
-startButton.grid(row=5, column=0)
+startButton.grid(row=6, column=0)
 digiRPMVar = DoubleVar()
 physRPMVar = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
@@ -327,5 +326,11 @@ endTimeEntry.grid(row=4, column=2)
 trackVar = BooleanVar()
 trackEntry = Checkbutton(root, text="Track Ball", variable=trackVar)
 trackEntry.grid(row=3, column=2)
+
+fpsVar = DoubleVar()
+fpsEntry = Entry(root, textvariable=fpsVar)
+fpsLabel = Label(root, text="Enter frames per second of video")
+fpsEntry.grid(row=5, column=1)
+fpsLabel.grid(row=5, column=0)
 
 root.mainloop()
