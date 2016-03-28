@@ -111,18 +111,21 @@ def annotateImg(img, i):
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
 
 def errFuncPolar(params, data):
-    model = np.abs(params[0]*np.exp(-data[0]*data[2]*params[1])*np.cos((data[2]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
-    return model - data[1]
+    modelR = np.abs(params[0]*np.exp(-data[0]*params[3]*params[1])*np.cos((params[3]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
+    modelTheta = createModelTheta(data[0], params, data[2][0], data[3])
+    model = np.append(modelR, modelTheta)
+    datas = np.append(data[1], data[2])
+    return model - datas
 
 def fitDataPolar(data):
-    result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0]), args=(data), full_output=1)
+    result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0, 1]), args=(data), full_output=1)
     return result[0]
 
 def createModelPolar(bestfit, t, omega):
     return np.abs(bestfit[0]*np.exp(-t*omega*bestfit[1])*np.cos((omega*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
 
-def createModelTheta(t, omega, bestfit, thetai, rot):
-    wd = omega * ((1 - (bestfit[1])**2)**(0.5))
+def createModelTheta(t, bestfit, thetai, rot):
+    wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
     period = (2*np.pi)/wd
     phi = bestfit[2]
     rot *= -(2*np.pi)/60
@@ -138,9 +141,9 @@ def createModelTheta(t, omega, bestfit, thetai, rot):
             theta[i] = thetai
         theta[i] += periodicTime*rot
         
-        if theta[i] > np.pi:
+        if theta[i] > 2*np.pi:
            theta[i] -= 2*np.pi
-        elif theta[i] < -np.pi:
+        elif theta[i] < 0:
            theta[i] += 2*np.pi
 
     return theta
@@ -247,12 +250,15 @@ def start():
     
         ballR = ((ballX**2)+(ballY**2))**(0.5)
         ballTheta = np.arctan2(ballY, ballX)
+        for i in range(len(ballTheta)):
+            if ballTheta[i] < 0:
+                ballTheta[i] += 2*np.pi
 
         omega = (np.pi)/3
-        dataFitR = fitDataPolar(np.array([t, ballR, omega]))
-        print dataFitR
-        modelR = createModelPolar(dataFitR, t, omega)
-        modelTheta = createModelTheta(t, omega, dataFitR, ballTheta[0], digiRPM + physicalRPM)
+        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]))
+        print dataFitPolar
+        modelR = createModelPolar(dataFitPolar, t, omega)
+        modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0], digiRPM + physicalRPM)
         plt.figure(2)
         plt.subplot(211)
         plt.plot(t, ballR, 'r1')
@@ -263,6 +269,7 @@ def start():
         plt.subplot(212)
         plt.plot(t, ballTheta, 'r1')
         plt.plot(t, modelTheta, 'b')
+        plt.plot(t, realTheta, 'k')
         plt.xlabel(r"$t$ (s)")
         plt.ylabel(r"$\theta$")
         plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/polar.pdf', format = 'pdf', dpi = 1200)
@@ -295,8 +302,8 @@ digiRPMVar = DoubleVar()
 physRPMVar = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
 physRPMEntry = Entry(root, textvariable=physRPMVar)
-digiLabel = Label(root, text="Please enter desired digital rotation (RPM).")
-physLabel = Label(root, text="Please enter physical rotation (RPM).")
+digiLabel = Label(root, text="Desired digital rotation (RPM):")
+physLabel = Label(root, text="Physical rotation (RPM):")
 digiRPMEntry.grid(row=1, column=1)
 physRPMEntry.grid(row=0, column=1)
 digiLabel.grid(row=1, column=0)
@@ -304,7 +311,7 @@ physLabel.grid(row=0, column=0)
 
 filenameVar = StringVar()
 filenameEntry = Entry(root, textvariable = filenameVar)
-filenameLabel = Label(root, text="Specify full path to movie.")
+filenameLabel = Label(root, text="Full filepath to movie:")
 filenameEntry.grid(row=2, column=1)
 filenameLabel.grid(row=2, column=0)
 
@@ -318,7 +325,7 @@ startTimeVar = DoubleVar()
 endTimeVar = DoubleVar()
 startTimeEntry = Entry(root, textvariable = startTimeVar)
 endTimeEntry = Entry(root, textvariable = endTimeVar)
-startTimeLabel = Label(root, text="Select start and end times (in seconds)")
+startTimeLabel = Label(root, text="Start and end times (in seconds):")
 startTimeLabel.grid(row=4, column=0)
 startTimeEntry.grid(row=4, column=1)
 endTimeEntry.grid(row=4, column=2)
@@ -329,7 +336,7 @@ trackEntry.grid(row=3, column=2)
 
 fpsVar = DoubleVar()
 fpsEntry = Entry(root, textvariable=fpsVar)
-fpsLabel = Label(root, text="Enter frames per second of video")
+fpsLabel = Label(root, text="Frames per second of video:")
 fpsEntry.grid(row=5, column=1)
 fpsLabel.grid(row=5, column=0)
 
