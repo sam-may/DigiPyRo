@@ -101,7 +101,7 @@ def annotateImg(img, i):
         prpm += '+'
     prpm += str(physicalRPM) + 'RPM'
     
-    drpm = 'Digital Rotation: '
+    drpm = 'Additional Digital Rotation: '
     if (digiRPM > 0):
         drpm += '+'
     drpm += str(digiRPM) + 'RPM'
@@ -109,6 +109,24 @@ def annotateImg(img, i):
     dLoc = (25, height - 75)
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
+
+def instructsCenter(img):
+    font = cv2.FONT_HERSHEY_PLAIN
+    line1 = 'Click on points along the border of the circle around which the movie will be rotated'
+    line1Loc = (25, 50)
+    cv2.putText(img, line1, line1Loc, font, 1, (255, 255, 255), 1)
+
+def instructsBall(img):
+    font = cv2.FONT_HERSHEY_PLAIN
+    line1 = 'Click and drag to create a circle around the ball.'
+    line1Loc = (25, 50)
+    line2 = 'The more accurately the initial location and size of the ball'
+    line2Loc = (25, 100)
+    line3 = 'are matched, the better the tracking results will be.'
+    line3Loc = (25, 150)
+    cv2.putText(img, line1, line1Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
 
 def errFuncPolar(params, data):
     modelR = np.abs(params[0]*np.exp(-data[0]*params[3]*params[1])*np.cos((params[3]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
@@ -161,8 +179,9 @@ def start():
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     fps = fpsVar.get()
+    fileName = savefileVar.get()
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
-    video_writer = cv2.VideoWriter(savefileVar.get(), fourcc, fps, (width, height))
+    video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height))
 
     global physicalRPM, digiRPM, dtheta, per
     physicalRPM = physRPMVar.get()
@@ -185,6 +204,7 @@ def start():
     cv2.namedWindow('CenterClick')
     cv2.setMouseCallback('CenterClick', circumferencePoints)
 
+    instructsCenter(frame)
     cv2.imshow('CenterClick', frame)
     cv2.waitKey(0)
     cv2.destroyWindow('CenterClick')
@@ -195,6 +215,7 @@ def start():
     cv2.namedWindow('Locate Ball')
     cv2.setMouseCallback('Locate Ball', locate)
 
+    instructsBall(frame)
     cv2.imshow('Locate Ball', frame)
     cv2.waitKey(0)
     cv2.destroyWindow('Locate Ball')
@@ -269,10 +290,9 @@ def start():
         plt.subplot(212)
         plt.plot(t, ballTheta, 'r1')
         plt.plot(t, modelTheta, 'b')
-        plt.plot(t, realTheta, 'k')
         plt.xlabel(r"$t$ (s)")
         plt.ylabel(r"$\theta$")
-        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/polar.pdf', format = 'pdf', dpi = 1200)
+        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
 
         modelX = modelR*np.cos(modelTheta)
         modelY = modelR*np.sin(modelTheta)
@@ -288,7 +308,7 @@ def start():
         plt.plot(t, modelY, 'k')
         plt.xlabel(r"$t$ (s)")
         plt.ylabel(r"$y$")
-        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/test.pdf', format = 'pdf', dpi =1200)   
+        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
     
     cv2.destroyAllWindows()
     vid.release()
