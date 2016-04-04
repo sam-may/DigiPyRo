@@ -63,6 +63,41 @@ def circumferencePoints(event, x, y, flags, param):
             cv2.circle(frame, center, r, (0,255,0), 1)
         cv2.imshow('CenterClick', frame) 
         frame = clone.copy()
+ 
+def removePoint(orig):
+    global npts, center, frame, xpoints, ypoints, r, poly1, poly2
+    if npts == 0:
+        return
+
+    else:
+        npts -= 1
+        if npts == 0:
+            xpoints = np.empty(0)
+            ypoints = np.empty(0)
+        elif npts == 1:
+            xpoints = np.array([xpoints[0]])
+            ypoints = np.array([ypoints[0]])
+        else:
+            xpoints = xpoints[0:npts]
+            ypoints = ypoints[0:npts]
+
+    frame = orig.copy()
+    for i in range(len(xpoints)):
+        cv2.circle(frame, (xpoints[i], ypoints[i]), 3, (0,255,0), -1)
+    if (len(xpoints) > 2):
+        bestfit = calc_center(xpoints, ypoints)
+        center = (bestfit[0], bestfit[1])
+        r = bestfit[2]
+        poly1 = np.array([[0,0],[frame.shape[1],0],[frame.shape[1],frame.shape[0]], [0,frame.shape[0]]])
+        poly2 = np.array([[bestfit[0]+r,bestfit[1]]])
+        circpts = 100
+        for i in range(1,circpts):
+            theta =  2*np.pi*(float(i)/circpts)
+            nextpt = np.array([[int(bestfit[0]+(r*np.cos(theta))),int(bestfit[1]+(r*np.sin(theta)))]])
+            poly2 = np.append(poly2,nextpt,axis=0)
+        cv2.circle(frame, center, 4, (255,0,0), -1)
+        cv2.circle(frame, center, r, (0,255,0), 1)
+    cv2.imshow('CenterClick', frame)
 
 def calc_center(xp, yp):
     n = len(xp)
@@ -112,61 +147,75 @@ def annotateImg(img, i):
 
 def instructsCenter(img):
     font = cv2.FONT_HERSHEY_PLAIN
-    line1 = 'Click on points along the border of the circle around which the movie will be rotated'
+    line1 = 'Click on 3 or more points along the border of the circle'
     line1Loc = (25, 50)
+    line2 = 'around which the movie will be rotated.'
+    line2Loc = (25, 75)
+    line3 = 'Press the BACKSPACE or DELETE button to undo a point.'
+    line3Loc = (25,100)
+    line4 = 'Press ENTER when done.'
+    line4Loc = (25,125) 
+    
     cv2.putText(img, line1, line1Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line4, line4Loc, font, 1, (255, 255, 255), 1)
 
 def instructsBall(img):
     font = cv2.FONT_HERSHEY_PLAIN
     line1 = 'Click and drag to create a circle around the ball.'
     line1Loc = (25, 50)
     line2 = 'The more accurately the initial location and size of the ball'
-    line2Loc = (25, 100)
+    line2Loc = (25, 75)
     line3 = 'are matched, the better the tracking results will be.'
-    line3Loc = (25, 150)
+    line3Loc = (25, 100)
+    line4 = 'Press ENTER when done.'
+    line4Loc = (25, 125)
+
     cv2.putText(img, line1, line1Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line4, line4Loc, font, 1, (255, 255, 255), 1)
 
 def errFuncPolar(params, data):
     modelR = np.abs(params[0]*np.exp(-data[0]*params[3]*params[1])*np.cos((params[3]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
     modelTheta = createModelTheta(data[0], params, data[2][0], data[3])
-    model = np.append(modelR, modelTheta)
-    datas = np.append(data[1], data[2])
+    model = np.append(modelR, modelR*modelTheta)
+    datas = np.append(data[1], data[1]*data[2])
     return model - datas
 
 def fitDataPolar(data):
     result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0, 1]), args=(data), full_output=1)
     return result[0]
 
-def createModelPolar(bestfit, t, omega):
+def createModelR(bestfit, t, omega):
     return np.abs(bestfit[0]*np.exp(-t*omega*bestfit[1])*np.cos((omega*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
 
 def createModelTheta(t, bestfit, thetai, rot):
     wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
     period = (2*np.pi)/wd
     phi = bestfit[2]
-    rot *= -(2*np.pi)/60
+    angularRot = rot*(-(2*np.pi)/60)
     theta = np.ones(len(t))*thetai
     for i in range(len(t)):
-        periodicTime = t[i] - ((period)*int(t[i]/period))
-        phase = (periodicTime / period) * 2*np.pi
-        if phase < (np.pi/2 + phi):
-            theta[i] = thetai
-        elif phase > (np.pi/2 + phi) and phase < (3*np.pi/2 + phi):
-            theta[i] = thetai + np.pi
-        elif phase > (3*np.pi/2 + phi):
-            theta[i] = thetai
-        theta[i] += periodicTime*rot
+        phase = (wd*t[i])-phi
+        while phase > 2*np.pi:
+            phase -= 2*np.pi
+        while phase < 0:
+            phase += 2*np.pi
+
+        if phase < (np.pi/2) or phase > ((3*np.pi)/2):
+           theta[i] = thetai
+        elif phase > (np.pi/2) and phase < ((3*np.pi)/2):
+           theta[i] = thetai + np.pi
+        theta[i] += t[i]*angularRot
         
-        if theta[i] > 2*np.pi:
+        while theta[i] > 2*np.pi:
            theta[i] -= 2*np.pi
-        elif theta[i] < 0:
+        while theta[i] < 0:
            theta[i] += 2*np.pi
-
+     
     return theta
-
-    
 
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
@@ -196,8 +245,8 @@ def start():
     # Close GUI window so rest of program can run
     root.destroy()
 
-    global frame, center
-    
+    global center, frame, xpoints, ypoints, r, poly1, poly2
+
     # Open first frame from video, user will click on center
     vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
     ret, frame = vid.read()
@@ -205,22 +254,30 @@ def start():
     cv2.setMouseCallback('CenterClick', circumferencePoints)
 
     instructsCenter(frame)
-    cv2.imshow('CenterClick', frame)
-    cv2.waitKey(0)
+    orig = frame.copy()
+    while(1):
+        cv2.imshow('CenterClick', frame)
+        k = cv2.waitKey(0)
+        if k == 13: # user presses ENTER
+            break
+        elif k == 127: # user presses BACKSPACE/DELETE
+            removePoint(orig)
+
     cv2.destroyWindow('CenterClick')
 
     # Select initial position of ball
+    if trackBall:
+        vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+        ret, frame = vid.read()
+        cv2.namedWindow('Locate Ball')
+        cv2.setMouseCallback('Locate Ball', locate)
+
+        instructsBall(frame)
+        cv2.imshow('Locate Ball', frame)
+        cv2.waitKey(0)
+        cv2.destroyWindow('Locate Ball')
+
     vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
-    ret, frame = vid.read()
-    cv2.namedWindow('Locate Ball')
-    cv2.setMouseCallback('Locate Ball', locate)
-
-    instructsBall(frame)
-    cv2.imshow('Locate Ball', frame)
-    cv2.waitKey(0)
-    cv2.destroyWindow('Locate Ball')
-
-
     t = np.empty(numFrames)
     ballX = np.empty(numFrames)
     ballY = np.empty(numFrames)
@@ -275,10 +332,16 @@ def start():
             if ballTheta[i] < 0:
                 ballTheta[i] += 2*np.pi
 
+        dataFile = open(fileName+'_data.txt', 'w')
+        dataFile.write('x y r theta\n')
+        for i in range(len(ballX)):
+            dataFile.write(str(ballX[i])+' '+str(ballY[i])+' '+str(ballR[i])+' '+str(ballTheta[i])+'\n')
+        dataFile.close()
+
         omega = (np.pi)/3
         dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]))
         print dataFitPolar
-        modelR = createModelPolar(dataFitPolar, t, omega)
+        modelR = createModelR(dataFitPolar, t, omega)
         modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0], digiRPM + physicalRPM)
         plt.figure(2)
         plt.subplot(211)
@@ -322,7 +385,7 @@ digiRPMVar = DoubleVar()
 physRPMVar = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
 physRPMEntry = Entry(root, textvariable=physRPMVar)
-digiLabel = Label(root, text="Desired digital rotation (RPM):")
+digiLabel = Label(root, text="Additional digital rotation (RPM):")
 physLabel = Label(root, text="Physical rotation (RPM):")
 digiRPMEntry.grid(row=1, column=1)
 physRPMEntry.grid(row=0, column=1)
