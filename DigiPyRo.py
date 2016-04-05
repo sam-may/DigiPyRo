@@ -188,8 +188,8 @@ def fitDataPolar(data):
     result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0, 1]), args=(data), full_output=1)
     return result[0]
 
-def createModelR(bestfit, t, omega):
-    return np.abs(bestfit[0]*np.exp(-t*omega*bestfit[1])*np.cos((omega*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
+def createModelR(bestfit, t):
+    return np.abs(bestfit[0]*np.exp(-t*bestfit[3]*bestfit[1])*np.cos((bestfit[3]*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
 
 def createModelTheta(t, bestfit, thetai, rot):
     wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
@@ -216,6 +216,17 @@ def createModelTheta(t, bestfit, thetai, rot):
            theta[i] += 2*np.pi
      
     return theta
+
+#def calcCartesianDerivs(x, y):
+#    return (x, y)
+
+#def calcPolarDerivs(bestfit, t):
+#    wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
+#    ur = -(bestfit[1]*bestfit[3]*bestfit[0]*np.exp(-bestfit[1]*bestfit[3]*t)*np.cos((wd*t)-bestfit[2]))-(bestfit[0]*wd*np.exp(-bestfit[1]*bestfit[3]*t)*np.sin((wd*t)-bestfit[2]))
+#    utheta = 
+
+def calcDeriv(f, t):
+    return np.diff(f) / np.diff(t)
 
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
@@ -332,16 +343,10 @@ def start():
             if ballTheta[i] < 0:
                 ballTheta[i] += 2*np.pi
 
-        dataFile = open(fileName+'_data.txt', 'w')
-        dataFile.write('x y r theta\n')
-        for i in range(len(ballX)):
-            dataFile.write(str(ballX[i])+' '+str(ballY[i])+' '+str(ballR[i])+' '+str(ballTheta[i])+'\n')
-        dataFile.close()
-
         omega = (np.pi)/3
         dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]))
         print dataFitPolar
-        modelR = createModelR(dataFitPolar, t, omega)
+        modelR = createModelR(dataFitPolar, t)
         modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0], digiRPM + physicalRPM)
         plt.figure(2)
         plt.subplot(211)
@@ -372,6 +377,47 @@ def start():
         plt.xlabel(r"$t$ (s)")
         plt.ylabel(r"$y$")
         plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
+
+        ux = calcDeriv(ballX, t)
+        uy = calcDeriv(ballY, t)
+        ur = calcDeriv(ballR, t)
+        utheta = calcDeriv(ballTheta, t)
+        tderiv = t[0:len(t)-1] # derivatives are calculated with a forward difference scheme, so there is no estimate
+                               # of the derivative at the last data point
+
+        dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta])
+
+        dataFile = open(fileName+'_data.txt', 'w')
+        dataFile.write('t x y r theta u_x u_y u_r u_theta\n')
+        
+        for i in range(len(ballX)-1):
+            for j in range(len(dataList)):
+                entry = "%.2f" % dataList[j][i]
+                if j < len(dataList) - 1:
+                    dataFile.write(entry + ' ')
+                else:
+                    dataFile.write(entry + '\n')
+        dataFile.close()
+
+        plt.figure(3)
+        plt.subplot(221)
+        plt.plot(tderiv, ux)
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$u_x$")
+        plt.subplot(222)
+        plt.plot(tderiv, uy)
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$u_y$")
+        plt.subplot(223)
+        plt.plot(tderiv, ur)
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$u_r$")
+        plt.subplot(224)
+        plt.plot(tderiv, utheta)
+        plt.xlabel(r"$t$ (s)")
+        plt.ylabel(r"$u_{\theta}$")
+        plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
+        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
     
     cv2.destroyAllWindows()
     vid.release()
