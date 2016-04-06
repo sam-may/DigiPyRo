@@ -179,23 +179,22 @@ def instructsBall(img):
 
 def errFuncPolar(params, data):
     modelR = np.abs(params[0]*np.exp(-data[0]*params[3]*params[1])*np.cos((params[3]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
-    modelTheta = createModelTheta(data[0], params, data[2][0], data[3])
+    modelTheta = createModelTheta(data[0], params, data[2][0])
     model = np.append(modelR, modelR*modelTheta)
     datas = np.append(data[1], data[1]*data[2])
     return model - datas
 
-def fitDataPolar(data):
-    result = sp.optimize.leastsq(errFuncPolar, np.array([100, 0.1, 0, 1]), args=(data), full_output=1)
+def fitDataPolar(data, guess):
+    result = sp.optimize.leastsq(errFuncPolar, guess, args=(data), full_output=1)
     return result[0]
 
 def createModelR(bestfit, t):
     return np.abs(bestfit[0]*np.exp(-t*bestfit[3]*bestfit[1])*np.cos((bestfit[3]*t*((1-(bestfit[1]**2))**(0.5)) - bestfit[2])))
 
-def createModelTheta(t, bestfit, thetai, rot):
+def createModelTheta(t, bestfit, thetai):
     wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
     period = (2*np.pi)/wd
     phi = bestfit[2]
-    angularRot = rot*(-(2*np.pi)/60)
     theta = np.ones(len(t))*thetai
     for i in range(len(t)):
         phase = (wd*t[i])-phi
@@ -208,7 +207,7 @@ def createModelTheta(t, bestfit, thetai, rot):
            theta[i] = thetai
         elif phase > (np.pi/2) and phase < ((3*np.pi)/2):
            theta[i] = thetai + np.pi
-        theta[i] += t[i]*angularRot
+        theta[i] += t[i]*(-wd)
         
         while theta[i] > 2*np.pi:
            theta[i] -= 2*np.pi
@@ -341,10 +340,10 @@ def start():
                 ballTheta[i] += 2*np.pi
 
         omega = (np.pi)/3
-        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]))
+        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,totOmega]))
         print dataFitPolar
         modelR = createModelR(dataFitPolar, t)
-        modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0], digiRPM + physicalRPM)
+        modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0])
 
         if makePlots:
             plt.figure(1)
