@@ -217,16 +217,8 @@ def createModelTheta(t, bestfit, thetai, rot):
      
     return theta
 
-#def calcCartesianDerivs(x, y):
-#    return (x, y)
-
-#def calcPolarDerivs(bestfit, t):
-#    wd = bestfit[3] * ((1 - (bestfit[1])**2)**(0.5))
-#    ur = -(bestfit[1]*bestfit[3]*bestfit[0]*np.exp(-bestfit[1]*bestfit[3]*t)*np.cos((wd*t)-bestfit[2]))-(bestfit[0]*wd*np.exp(-bestfit[1]*bestfit[3]*t)*np.sin((wd*t)-bestfit[2]))
-#    utheta = 
-
 def calcDeriv(f, t):
-    return np.diff(f) / np.diff(t)
+    return np.gradient(f) / np.gradient(t)
 
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
@@ -246,6 +238,8 @@ def start():
     global physicalRPM, digiRPM, dtheta, per
     physicalRPM = physRPMVar.get()
     digiRPM = digiRPMVar.get()
+    totRPM = physicalRPM + digiRPM
+    totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
     per = 60*(1 / np.abs(float(digiRPM)))
 
@@ -295,6 +289,8 @@ def start():
     ballPts = 0 #will identify the number of times that Hough Circle transform identifies the ball
     lastLoc = particleCenter
     thresh = 50
+    trackingData = np.zeros(numFrames) # logical vector which tells us if the ball was tracked at each frame
+    framesArray = np.empty((numFrames,height,width,3), np.uint8)
     for i in range(numFrames):
         ret, frame = vid.read() # read next frame from video
 
@@ -321,6 +317,7 @@ def start():
 	                t[ballPts] = i/fps
                         lastLoc = np.array([j[0],j[1]])      
                         ballPts += 1
+                        trackingData[i] = 1
                         break
            
             for k in range(ballPts-1):
@@ -328,7 +325,8 @@ def start():
 
 
         annotateImg(centered, i)
-        video_writer.write(centered)
+        framesArray[i] = centered
+        #video_writer.write(centered)
 
     if trackBall:
         ballX = ballX[0:ballPts]
@@ -382,15 +380,17 @@ def start():
         uy = calcDeriv(ballY, t)
         ur = calcDeriv(ballR, t)
         utheta = calcDeriv(ballTheta, t)
-        tderiv = t[0:len(t)-1] # derivatives are calculated with a forward difference scheme, so there is no estimate
+        utot = ((ux**2)+(uy**2))**(0.5)
+        tderiv = t
+        #tderiv = t[0:len(t)-1] # derivatives are calculated with a forward difference scheme, so there is no estimate
                                # of the derivative at the last data point
 
-        dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta])
+        dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta, utot])
 
         dataFile = open(fileName+'_data.txt', 'w')
-        dataFile.write('t x y r theta u_x u_y u_r u_theta\n')
+        dataFile.write('t x y r theta u_x u_y u_r u_theta u_tot\n')
         
-        for i in range(len(ballX)-1):
+        for i in range(len(ballX)):
             for j in range(len(dataList)):
                 entry = "%.2f" % dataList[j][i]
                 if j < len(dataList) - 1:
@@ -399,15 +399,18 @@ def start():
                     dataFile.write(entry + '\n')
         dataFile.close()
 
+        rInert = utot / (2*totOmega) # inertial radius
+
         plt.figure(3)
         plt.subplot(221)
-        plt.plot(tderiv, ux)
+        plt.plot(tderiv, ux, label=r"$u_x$")
+        plt.plot(tderiv, uy, label=r"$u_y$")
         plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$u_x$")
+        plt.legend(loc = 'upper right', fontsize = 'x-small')
         plt.subplot(222)
-        plt.plot(tderiv, uy)
+        plt.plot(tderiv, rInert)
         plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$u_y$")
+        plt.ylabel(r"$r_i$")
         plt.subplot(223)
         plt.plot(tderiv, ur)
         plt.xlabel(r"$t$ (s)")
@@ -416,11 +419,34 @@ def start():
         plt.plot(tderiv, utheta)
         plt.xlabel(r"$t$ (s)")
         plt.ylabel(r"$u_{\theta}$")
+        plt.ylim([-3*np.abs(totOmega), 3*np.abs(totOmega)])
         plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
         plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
-    
+
     cv2.destroyAllWindows()
     vid.release()
+    #video_writer.release()
+
+    
+
+    # Loop through video and report inertial radius
+    if trackBall:
+        #vid2 = cv2.VideoCapture(fileName+'.avi')
+        #video_writer2 = cv2.VideoWriter(fileName+'2.avi', fourcc, fps, (width, height))
+        index=0
+        for i in range(numFrames):
+            #ret, frame = vid2.read()
+            frame = framesArray[i]
+            if trackingData[i]:
+                lineStart = (int(0.5+ballX[index]+center[0]), int(0.5+ballY[index]+center[1]))
+                angle = np.arctan2(uy[index],ux[index])
+                rad = rInert[index]
+                lineEnd = (int(0.5+center[0]+ballX[index]+(rad*np.sin(angle))), int(0.5+center[1]+ballY[index]-(rad*np.cos(angle))))
+                cv2.line(frame, lineStart, lineEnd, (255, 255, 255), 1)
+                index+=1
+            video_writer.write(frame)
+    
+    #vid2.release()
     video_writer.release()
 
 root = Tk()
