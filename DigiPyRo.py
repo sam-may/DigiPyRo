@@ -226,8 +226,6 @@ def start():
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
     npts = 0
     spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
-    #spinlab = cv2.resize(spinlab,spinlab.shape, interpolation = cv2.INTER_CUBIC)
-    #numFrames = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     fps = fpsVar.get()
@@ -246,6 +244,7 @@ def start():
     startFrame = fps*startTimeVar.get()
     numFrames = int(fps*(endTimeVar.get() - startTimeVar.get()))
     trackBall = trackVar.get()
+    makePlots = plotVar.get()
 
     # Close GUI window so rest of program can run
     root.destroy()
@@ -346,49 +345,49 @@ def start():
         print dataFitPolar
         modelR = createModelR(dataFitPolar, t)
         modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0], digiRPM + physicalRPM)
-        plt.figure(2)
-        plt.subplot(211)
-        plt.plot(t, ballR, 'r1')
-        plt.plot(t, modelR, 'b')
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$r$")
 
-        plt.subplot(212)
-        plt.plot(t, ballTheta, 'r1')
-        plt.plot(t, modelTheta, 'b')
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$\theta$")
-        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
+        if makePlots:
+            plt.figure(1)
+            plt.subplot(211)
+            plt.plot(t, ballR, 'r1')
+            plt.plot(t, modelR, 'b')
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$r$")
+
+            plt.subplot(212)
+            plt.plot(t, ballTheta, 'r1')
+            plt.plot(t, modelTheta, 'b')
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$\theta$")
+            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
 
         modelX = modelR*np.cos(modelTheta)
         modelY = modelR*np.sin(modelTheta)
 
-        plt.figure(1)
-        plt.subplot(211)
-        plt.plot(t, ballX, 'r1')
-        plt.plot(t, modelX, 'k')
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$x$")
-        plt.subplot(212)
-        plt.plot(t, ballY, 'b1')
-        plt.plot(t, modelY, 'k')
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$y$")
-        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
+        if makePlots:
+            plt.figure(2)
+            plt.subplot(211)
+            plt.plot(t, ballX, 'r1')
+            plt.plot(t, modelX, 'k')
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$x$")
+            plt.subplot(212)
+            plt.plot(t, ballY, 'b1')
+            plt.plot(t, modelY, 'k')
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$y$")
+            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
 
         ux = calcDeriv(ballX, t)
         uy = calcDeriv(ballY, t)
         ur = calcDeriv(ballR, t)
         utheta = calcDeriv(ballTheta, t)
         utot = ((ux**2)+(uy**2))**(0.5)
-        tderiv = t
-        #tderiv = t[0:len(t)-1] # derivatives are calculated with a forward difference scheme, so there is no estimate
-                               # of the derivative at the last data point
 
         dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta, utot])
 
         dataFile = open(fileName+'_data.txt', 'w')
-        dataFile.write('t x y r theta u_x u_y u_r u_theta u_tot\n')
+        dataFile.write('t x y r theta u_x u_y u_r u_theta ||u||\n')
         
         for i in range(len(ballX)):
             for j in range(len(dataList)):
@@ -401,41 +400,36 @@ def start():
 
         rInert = utot / (2*totOmega) # inertial radius
 
-        plt.figure(3)
-        plt.subplot(221)
-        plt.plot(tderiv, ux, label=r"$u_x$")
-        plt.plot(tderiv, uy, label=r"$u_y$")
-        plt.xlabel(r"$t$ (s)")
-        plt.legend(loc = 'upper right', fontsize = 'x-small')
-        plt.subplot(222)
-        plt.plot(tderiv, rInert)
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$r_i$")
-        plt.subplot(223)
-        plt.plot(tderiv, ur)
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$u_r$")
-        plt.subplot(224)
-        plt.plot(tderiv, utheta)
-        plt.xlabel(r"$t$ (s)")
-        plt.ylabel(r"$u_{\theta}$")
-        plt.ylim([-3*np.abs(totOmega), 3*np.abs(totOmega)])
-        plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
-        plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
+        if makePlots:
+            plt.figure(3)
+            plt.subplot(221)
+            plt.plot(t, ux, label=r"$u_x$")
+            plt.plot(t, uy, label=r"$u_y$")
+            plt.xlabel(r"$t$ (s)")
+            plt.legend(loc = 'upper right', fontsize = 'x-small')
+            plt.subplot(222)
+            plt.plot(t, rInert)
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$r_i$")
+            plt.subplot(223)
+            plt.plot(t, ur)
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$u_r$")
+            plt.subplot(224)
+            plt.plot(t, utheta)
+            plt.xlabel(r"$t$ (s)")
+            plt.ylabel(r"$u_{\theta}$")
+            plt.ylim([-3*np.abs(totOmega), 3*np.abs(totOmega)])
+            plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
+            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
 
     cv2.destroyAllWindows()
     vid.release()
-    #video_writer.release()
-
-    
 
     # Loop through video and report inertial radius
-    if trackBall:
-        #vid2 = cv2.VideoCapture(fileName+'.avi')
-        #video_writer2 = cv2.VideoWriter(fileName+'2.avi', fourcc, fps, (width, height))
+    if trackBall and totRPM != 0:
         index=0
         for i in range(numFrames):
-            #ret, frame = vid2.read()
             frame = framesArray[i]
             if trackingData[i]:
                 lineStart = (int(0.5+ballX[index]+center[0]), int(0.5+ballY[index]+center[1]))
@@ -446,7 +440,6 @@ def start():
                 index+=1
             video_writer.write(frame)
     
-    #vid2.release()
     video_writer.release()
 
 root = Tk()
@@ -488,6 +481,9 @@ endTimeEntry.grid(row=4, column=2)
 trackVar = BooleanVar()
 trackEntry = Checkbutton(root, text="Track Ball", variable=trackVar)
 trackEntry.grid(row=3, column=2)
+plotVar = BooleanVar()
+plotEntry = Checkbutton(root, text="Create plots with tracking results", variable=plotVar)
+plotEntry.grid(row=3, column=3)
 
 fpsVar = DoubleVar()
 fpsEntry = Entry(root, textvariable=fpsVar)
