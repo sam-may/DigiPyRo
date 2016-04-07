@@ -207,7 +207,7 @@ def createModelTheta(t, bestfit, thetai):
            theta[i] = thetai
         elif phase > (np.pi/2) and phase < ((3*np.pi)/2):
            theta[i] = thetai + np.pi
-        theta[i] += t[i]*(-wd)
+        theta[i] += t[i]*(-bestfit[4])
         
         while theta[i] > 2*np.pi:
            theta[i] -= 2*np.pi
@@ -216,8 +216,15 @@ def createModelTheta(t, bestfit, thetai):
      
     return theta
 
-def calcDeriv(f, t):
+def calcDeriv2(f, t):
     return np.gradient(f) / np.gradient(t)
+
+def calcDeriv(f, t):
+    df = np.empty(len(f))
+    df[0] = (f[1] - f[0]) / (t[1] - t[0])
+    df[len(f)-1] = (f[len(f)-1] - f[len(f)-2]) / (t[len(f)-1] - t[len(f)-2])
+    df[1:len(f)-1] = f[0:len(f)-2]*((t[1:len(f)-1] - t[2:len(f)]) / ((t[0:len(f)-2] - t[1:len(f)-1])*(t[0:len(f)-2] - t[2:len(f)]))) + f[1:len(f)-1]*(((2*t[1:len(f)-1]) - t[0:len(f)-2] - t[2:len(f)]) / ((t[1:len(f)-1] - t[0:len(f)-2])*(t[1:len(f)-1] - t[2:len(f)]))) + f[2:len(f)]*((t[1:len(f)-1] - t[0:len(f)-2]) / ((t[2:len(f)] - t[0:len(f)-2])*(t[2:len(f)] - t[1:len(f)-1]))) 
+    return df
 
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
@@ -340,10 +347,20 @@ def start():
                 ballTheta[i] += 2*np.pi
 
         omega = (np.pi)/3
-        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,totOmega]))
-        print dataFitPolar
+        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,totOmega,totOmega]))
         modelR = createModelR(dataFitPolar, t)
         modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0])
+
+        fTh = 2*totOmega
+        fExp = 2*dataFitPolar[3]
+        fErr = np.abs((fTh - fExp) / fTh)
+
+        diagnostic1 = 'Best estimate of: \n'
+        diagnostic2 = '    Inertial frequency, f: ' + str(2*dataFitPolar[3]) + '\n'
+        diagnostic3 = '    '+ str(fErr*100) + '% error from theoretical value based on input RPM \n'
+        diagnostic4 = '    Damping coefficient, d: ' + str(dataFitPolar[1]) + '\n'
+        diag = diagnostic1 + diagnostic2 + diagnostic3 + diagnostic4
+        print diag
 
         if makePlots:
             plt.figure(1)
@@ -397,7 +414,7 @@ def start():
                     dataFile.write(entry + '\n')
         dataFile.close()
 
-        rInert = utot / (2*totOmega) # inertial radius
+        rInert = utot / fExp # inertial radius
 
         if makePlots:
             plt.figure(3)
