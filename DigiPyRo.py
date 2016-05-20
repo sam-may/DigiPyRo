@@ -265,8 +265,8 @@ def calcDeriv(f, t):
 def splineFit(x, y, deg):
     fit = np.polyfit(x, y, deg)
     yfit = np.zeros(len(y))
-    for i in range(deg):
-        yfit += fit[i]*(x**(deg-(i+1)))
+    for i in range(deg+1):
+        yfit += fit[i]*(x**(deg-i))
     return yfit
 
 def start():
@@ -275,19 +275,20 @@ def start():
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
     npts = 0
     spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
-    #width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
-    #height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-    width = 1280
-    height = 720
+    width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
+    height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+    #width = 1280
+    #height = 720
     fps = fpsVar.get()
     fileName = savefileVar.get()
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
     video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height))
 
-    global naturalRPM, physicalRPM, digiRPM, dtheta, per, custMask
+    global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask
     naturalRPM = tableRPMVar.get()
     naturalOmega = (naturalRPM * 2*np.pi)/60
     physicalRPM = physRPMVar.get()
+    camRPM = camRPMVar.get()
     digiRPM = digiRPMVar.get()
     curvRPM = naturalRPM - np.abs(physicalRPM)
     totRPM = physicalRPM + digiRPM
@@ -351,19 +352,22 @@ def start():
     if trackBall:
         ballPts = 0 #will identify the number of times that Hough Circle transform identifies the ball
         lastLoc = particleCenter
-        thresh = 150
+        thresh = 50
         trackingData = np.zeros(numFrames) # logical vector which tells us if the ball was tracked at each frame
     framesArray = np.empty((numFrames,height,width,3), np.uint8)
     for i in range(numFrames):
         ret, frame = vid.read() # read next frame from video
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
-        cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
-        cv2.circle(frame, center, 4, (255,0,0), -1)
+        if totRPM != 0:
+            cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
+            cv2.circle(frame, center, 4, (255,0,0), -1)
         #frame = centerImg(frame, center[0], center[1])
 
         if addRot:
             M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
             frame = cv2.warpAffine(frame, M, (width, height))
+            if totRPM == 0:
+                cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
         
         #cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
         #cv2.circle(frame, center, 4, (255,0,0), -1)
@@ -394,8 +398,8 @@ def start():
 
 
         annotateImg(centered, i)
-        framesArray[i] = centered
-        #video_writer.write(centered)
+        #framesArray[i] = centered
+        video_writer.write(centered)
 
     if trackBall:
         ballX = ballX[0:ballPts]
@@ -411,50 +415,50 @@ def start():
                 ballTheta[i] += 2*np.pi
 
         omega = (np.pi)/3
-        dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,naturalOmega,totOmega]))
-        modelR = createModelR(dataFitPolar, t)
-        modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0])
+        #dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,naturalOmega,totOmega]))
+        #modelR = createModelR(dataFitPolar, t)
+        #modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0])
 
         fTh = 2*totOmega
-        fExp = 2*dataFitPolar[3]
-        fErr = np.abs((fTh - fExp) / fTh)
+        #fExp = 2*dataFitPolar[3]
+        #fErr = np.abs((fTh - fExp) / fTh)
 
-        if totOmega != 0:
-            diagnostic1 = 'Best estimate of: \n'
-            diagnostic2 = '    Inertial frequency, f: ' + str(2*dataFitPolar[3]) + '\n'
-            diagnostic3 = '    '+ str(fErr*100) + '% error from theoretical value based on input RPM \n'
-            diagnostic4 = '    Damping coefficient, d: ' + str(dataFitPolar[1]) + '\n'
-            diag = diagnostic1 + diagnostic2 + diagnostic3 + diagnostic4
-            print diag
+        #if totOmega != 0:
+            #diagnostic1 = 'Best estimate of: \n'
+            #diagnostic2 = '    Inertial frequency, f: ' + str(2*dataFitPolar[3]) + '\n'
+            #diagnostic3 = '    '+ str(fErr*100) + '% error from theoretical value based on input RPM \n'
+            #diagnostic4 = '    Damping coefficient, d: ' + str(dataFitPolar[1]) + '\n'
+            #diag = diagnostic1 + diagnostic2 + diagnostic3 + diagnostic4
+            #print diag
 
         if makePlots:
             plt.figure(1)
             plt.subplot(211)
             plt.plot(t, ballR, 'r1')
-            plt.plot(t, modelR, 'b')
+            #plt.plot(t, modelR, 'b')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$r$")
 
             plt.subplot(212)
             plt.plot(t, ballTheta, 'r1')
-            plt.plot(t, modelTheta, 'b')
+            #plt.plot(t, modelTheta, 'b')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$\theta$")
             plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
 
-        modelX = modelR*np.cos(modelTheta)
-        modelY = modelR*np.sin(modelTheta)
+        #modelX = modelR*np.cos(modelTheta)
+        #modelY = modelR*np.sin(modelTheta)
 
         if makePlots:
             plt.figure(2)
             plt.subplot(211)
             plt.plot(t, ballX, 'r1')
-            plt.plot(t, modelX, 'k')
+            #plt.plot(t, modelX, 'k')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$x$")
             plt.subplot(212)
             plt.plot(t, ballY, 'b1')
-            plt.plot(t, modelY, 'k')
+            #plt.plot(t, modelY, 'k')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$y$")
             plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
@@ -479,8 +483,11 @@ def start():
                     dataFile.write(entry + '\n')
         dataFile.close()
 
-        rInert = utot / fExp # inertial radius
-        rInertSmooth = splineFit(t, rInert, 10)
+        rInert = utot / fTh # inertial radius
+        rInertSmooth = splineFit(t, rInert, 20)
+        uxSmooth = splineFit(t, ux, 20)
+        uySmooth = splineFit(t, uy, 20)
+
 
         if makePlots:
             plt.figure(3)
@@ -512,20 +519,29 @@ def start():
     # Loop through video and report inertial radius
     if trackBall and totRPM != 0:
         index=0
+        lineStartX = np.empty(ballPts, dtype=np.int16)
+        lineStartY = np.empty(ballPts, dtype=np.int16)
+        lineEndX = np.empty(ballPts, dtype=np.int16)
+        lineEndY = np.empty(ballPts, dtype=np.int16)
         for i in range(numFrames):
             frame = framesArray[i]
             if trackingData[i]:
-                lineStart = (int(0.5+ballX[index]+center[0]), int(0.5+ballY[index]+center[1]))
-                angle = np.arctan2(uy[index],ux[index])
-                rad = rInert[index]
-                lineEnd = (int(0.5+center[0]+ballX[index]+(rad*np.sin(angle))), int(0.5+center[1]+ballY[index]-(rad*np.cos(angle))))
-                cv2.line(frame, lineStart, lineEnd, (255, 255, 255), 1)
+                (lineStartX[index], lineStartY[index]) = (int(0.5+ballX[index]+center[0]), int(0.5+ballY[index]+center[1]))
+                angle = np.arctan2(uySmooth[index],uxSmooth[index])
+                rad = rInertSmooth[index]
+                (lineEndX[index], lineEndY[index]) = (int(0.5+center[0]+ballX[index]+(rad*np.sin(angle))), int(0.5+center[1]+ballY[index]-(rad*np.cos(angle))))
+                if index < 50:
+                    numLines = index
+                else:
+                    numLines = 50
+                for j in range(numLines):
+                    cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
                 index+=1
             video_writer.write(frame)
-    else:
-        for i in range(numFrames):
-            frame = framesArray[i]
-            video_writer.write(frame)
+    #else:
+        #for i in range(numFrames):
+            #frame = framesArray[i]
+            #video_writer.write(frame)
     
     video_writer.release()
 
@@ -542,14 +558,19 @@ tableLabel.grid(row=0, column=0)
 
 digiRPMVar = DoubleVar()
 physRPMVar = DoubleVar()
+camRPMVar  = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
 physRPMEntry = Entry(root, textvariable=physRPMVar)
+camRPMEntry  = Entry(root, textvariable=camRPMVar)
 digiLabel = Label(root, text="Additional digital rotation (RPM):")
-physLabel = Label(root, text="Physical rotation (RPM):")
+physLabel = Label(root, text="Physical rotation (of experiment, RPM):")
+camLabel  = Label(root, text="Physical rotation (of camera, RPM):")
 digiRPMEntry.grid(row=2, column=1)
 physRPMEntry.grid(row=1, column=1)
+camRPMEntry.grid(row=1, column=3)
 digiLabel.grid(row=2, column=0)
 physLabel.grid(row=1, column=0)
+camLabel.grid(row=1, column=2)
 
 customMaskVar = BooleanVar()
 customMaskEntry = Checkbutton(root, text="Custom-Shaped Mask (checking this box allows for a polygon-shaped mask. default is circular)", variable=customMaskVar)
