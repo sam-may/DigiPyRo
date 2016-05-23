@@ -398,8 +398,8 @@ def start():
 
 
         annotateImg(centered, i)
-        #framesArray[i] = centered
-        video_writer.write(centered)
+        framesArray[i] = centered
+        #video_writer.write(centered)
 
     if trackBall:
         ballX = ballX[0:ballPts]
@@ -538,10 +538,10 @@ def start():
                     cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
                 index+=1
             video_writer.write(frame)
-    #else:
-        #for i in range(numFrames):
-            #frame = framesArray[i]
-            #video_writer.write(frame)
+    else:
+        for i in range(numFrames):
+            frame = framesArray[i]
+            video_writer.write(frame)
     
     video_writer.release()
 
