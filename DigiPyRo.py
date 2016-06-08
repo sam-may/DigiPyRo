@@ -167,6 +167,9 @@ def annotateImg(img, i):
     tLoc = (width - 225, height-25)
     cv2.putText(img, timestamp, tLoc, font, 1, (255, 255, 255), 1)
 
+    crpm = 'Original Rotation of Camera: '
+    crpm += str(camRPM) + 'RPM'
+
     prpm = 'Physical Rotation: '
     if (physicalRPM > 0):
         prpm += '+'
@@ -176,10 +179,13 @@ def annotateImg(img, i):
     if (digiRPM > 0):
         drpm += '+'
     drpm += str(digiRPM) + 'RPM'
+
+    cLoc = (25, height - 105)
     pLoc = (25, height - 25)
-    dLoc = (25, height - 75)
+    dLoc = (25, height - 65)
     cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, crpm, cLoc, font, 1, (255, 255, 255), 1)
 
 def instructsCenter(img):
     font = cv2.FONT_HERSHEY_PLAIN
@@ -291,10 +297,10 @@ def start():
     camRPM = camRPMVar.get()
     digiRPM = digiRPMVar.get()
     curvRPM = naturalRPM - np.abs(physicalRPM)
-    totRPM = physicalRPM + digiRPM
+    totRPM = camRPM + digiRPM
     totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
-    per = 60*(1 / np.abs(float(digiRPM)))
+    #per = 60*(1 / np.abs(float(digiRPM)))
     addRot = digiRPM != 0
 
     startFrame = fps*startTimeVar.get()
