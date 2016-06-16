@@ -280,7 +280,7 @@ def start():
 
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
     npts = 0
-    spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
+    #spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     #width = 1280
@@ -450,7 +450,7 @@ def start():
             #plt.plot(t, modelTheta, 'b')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$\theta$")
-            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
+            plt.savefig(fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
 
         #modelX = modelR*np.cos(modelTheta)
         #modelY = modelR*np.sin(modelTheta)
@@ -467,7 +467,7 @@ def start():
             #plt.plot(t, modelY, 'k')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$y$")
-            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
+            plt.savefig(fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
 
         ux = calcDeriv(ballX, t)
         uy = calcDeriv(ballY, t)
@@ -517,7 +517,7 @@ def start():
             plt.ylabel(r"$u_{\theta}$")
             plt.ylim([-3*np.abs(totOmega), 3*np.abs(totOmega)])
             plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
-            plt.savefig('/Users/sammay/Desktop/SPINLab/DigiRo/'+fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
+            plt.savefig(fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
 
     cv2.destroyAllWindows()
     vid.release()
