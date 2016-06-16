@@ -1,7 +1,7 @@
 # This program creates a synthetic .avi movie for use with DigiPyRo
 # The video shows a ball rolling on a parabolic surface
 # The user may change the length of the movie[1], the frame rate of the movie[2], the resolution of the movie[3] 
-# the frequency of oscillations[4], the size of the ball[5], and choose to add/remove frictional effects[6]
+# the frequency of oscillations[4] and choose to add/remove frictional effects[5]
 
 # Import necessary modules
 import cv2
@@ -25,18 +25,19 @@ height = 720    			# [3] Decrease the width and height for increased speed, incr
 
 # Define ball and table values
 rpm = 10                                # [4] frequency of oscillations (in RPM). Good values might be 5-15
-ballSize = 24				# [5] radius of ball in pixels. Good values might be 15-30
-friction = False			# [6] set to "False" for no friction (harmonic oscillator) or "True" to add friction (damped harmonic oscillator)
-dampCoeff = 0.1				# [6] coefficient of friction (applicable only if "friction = True"). Good values might be 0.1-0.2
+friction = False			# [5] set to "False" for no friction (harmonic oscillator) or "True" to add friction (damped harmonic oscillator)
+dampCoeff = 0.1				# [5] coefficient of friction (applicable only if "friction = True"). Good values might be 0.1-0.2
 
 
 # Set the amplitude of oscillations to 40% of the smaller dimension
 amp = 0
 if width > height:
     amp = int(0.4*height)
+    ballSize = int(height/30)
 else:
-    amp = int(0.4*width)  
- 				
+    amp = int(0.4*width)
+    ballSize = int(width/30)  
+ 			
 initPos = (width/2, height/2 - amp) 	# initial xy-coordinates of ball
 omega = (rpm * 2 * np.pi)/60		# calculate angular frequency of oscillations 
 
