@@ -157,7 +157,7 @@ def annotateImg(img, i):
     cv2.putText(img, dpro, dproLoc, font, 1, (255, 255, 255), 1)
     
     #img[(height-25)-spinlab.shape[0]:height-25, (width-25)-spinlab.shape[1]:width-25] = spinlab
-    img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
+    #img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
 
     #perStamp = 'Period (T): ' + str(round(per,1)) + ' s'
     #perLoc = (25, height-75)
