@@ -1,6 +1,7 @@
 # This program creates a synthetic .avi movie for use with DigiPyRo
 # The video shows a ball rolling on a parabolic surface
-# The user may change the length of the movie[1], the frame rate of the movie[2], the frequency of oscillations[3], the size of the ball[4], and choose to add/remove frictional effects[5]
+# The user may change the length of the movie[1], the frame rate of the movie[2], the resolution of the movie[3] 
+# the frequency of oscillations[4], the size of the ball[5], and choose to add/remove frictional effects[6]
 
 # Import necessary modules
 import cv2
@@ -19,14 +20,14 @@ saveFile += '.avi'
 # Define movie details
 movLength = 10				# [1] define the desired length of the movie in seconds
 fps = 30.0      			# [2] Set this to a low value (10-15) for increased speed or a higher value (30-60) for better results with DigiPyRo
-width = 1260				# Width and height in pixels
-height = 720    			# Decrease the width and height for increased speed, increase for improved resolution
+width = 1260				# [3] Width and height in pixels
+height = 720    			# [3] Decrease the width and height for increased speed, increase for improved resolution
 
 # Define ball and table values
-ballSize = 24				# [4] radius of ball in pixels. Good values might be 15-30
-rpm = 10				# [3] frequency of oscillations (in RPM). Good values might be 5-15
-friction = False			# [5] set to "False" for no friction (harmonic oscillator) or "True" to add friction (damped harmonic oscillator)
-dampCoeff = 0.1				# coefficient of friction (applicable only if "friction = True"). Good values might be 0.1-0.2
+rpm = 10                                # [4] frequency of oscillations (in RPM). Good values might be 5-15
+ballSize = 24				# [5] radius of ball in pixels. Good values might be 15-30
+friction = False			# [6] set to "False" for no friction (harmonic oscillator) or "True" to add friction (damped harmonic oscillator)
+dampCoeff = 0.1				# [6] coefficient of friction (applicable only if "friction = True"). Good values might be 0.1-0.2
 
 
 # Set the amplitude of oscillations to 40% of the smaller dimension
