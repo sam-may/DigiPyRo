@@ -1,3 +1,10 @@
+# DigiPyRo is a program with two main functions:
+# 1. Digital rotation of movies.
+# 2. Single-particle tracking.
+# See the README and instructables for further documentation, installation instructions and examples.
+
+
+# Import necessary Python modules
 import cv2
 import numpy as np
 from Tkinter import *
@@ -6,6 +13,11 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import scipy as sp
 from scipy.optimize import leastsq
+
+
+########################
+### Helper Functions ###
+########################
 
 def centerClick(event, x, y, flags, param):
     global center, frame
@@ -282,8 +294,6 @@ def start():
     spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png')
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
-    #width = 1280
-    #height = 720
     fps = fpsVar.get()
     fileName = savefileVar.get()
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
@@ -301,7 +311,6 @@ def start():
     totRPM = camRPM + digiRPM
     totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
-    #per = 60*(1 / np.abs(float(digiRPM)))
     addRot = digiRPM != 0
 
     startFrame = fps*startTimeVar.get()
@@ -366,9 +375,9 @@ def start():
         ret, frame = vid.read() # read next frame from video
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
         if totRPM != 0:
-            cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
-            cv2.circle(frame, center, 4, (255,0,0), -1)
-        #frame = centerImg(frame, center[0], center[1])
+            cv2.fillPoly(frame, np.array([poly1, poly2]), 0) # black out everything outside the region of interest
+            cv2.circle(frame, center, 4, (255,0,0), -1) # place a circle at the center of rotation
+        
 
         if addRot:
             M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
@@ -376,18 +385,16 @@ def start():
             if totRPM == 0:
                 cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
         
-        #cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
-        #cv2.circle(frame, center, 4, (255,0,0), -1)
-        frame = centerImg(frame, center[0], center[1])
+        frame = centerImg(frame, center[0], center[1]) # center the image
     
     
-        centered = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
+        centered = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC) # ensure the frame is the correct dimensions
         
-        if trackBall:
-            gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY)
-            gray = cv2.medianBlur(gray,5)
+        if trackBall: # if tracking is turned on, apply tracking algorithm
+            gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY) # convert to black and whitee
+            gray = cv2.medianBlur(gray,5) # blur image. this allows for better identification of circles
             ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=10, minRadius = int(particleRadius * 0.6), maxRadius = int(particleRadius * 1.4))
-            if type(ballLoc) != NoneType :
+            if type(ballLoc) != NoneType : # if a circle is identified, record it
                 for j in ballLoc[0,:]:
                     if (np.abs(j[0] - lastLoc[0]) < thresh) and (np.abs(j[1] - lastLoc[1]) < thresh):    
                         cv2.circle(centered, (j[0],j[1]), j[2], (0,255,0),1)
@@ -406,7 +413,6 @@ def start():
 
         annotateImg(centered, i)
         framesArray[i] = centered
-        #video_writer.write(centered)
 
     if trackBall:
         ballX = ballX[0:ballPts]
@@ -421,51 +427,29 @@ def start():
             if ballTheta[i] < 0:
                 ballTheta[i] += 2*np.pi
 
-        omega = (np.pi)/3
-        #dataFitPolar = fitDataPolar(np.array([t, ballR, ballTheta, digiRPM + physicalRPM]), np.array([ballR[0],0.0,0,naturalOmega,totOmega]))
-        #modelR = createModelR(dataFitPolar, t)
-        #modelTheta = createModelTheta(t, dataFitPolar, ballTheta[0])
-
         fTh = 2*totOmega
-        #fExp = 2*dataFitPolar[3]
-        #fErr = np.abs((fTh - fExp) / fTh)
 
-        #if totOmega != 0:
-            #diagnostic1 = 'Best estimate of: \n'
-            #diagnostic2 = '    Inertial frequency, f: ' + str(2*dataFitPolar[3]) + '\n'
-            #diagnostic3 = '    '+ str(fErr*100) + '% error from theoretical value based on input RPM \n'
-            #diagnostic4 = '    Damping coefficient, d: ' + str(dataFitPolar[1]) + '\n'
-            #diag = diagnostic1 + diagnostic2 + diagnostic3 + diagnostic4
-            #print diag
-
-        if makePlots:
+        if makePlots: # if option to make plots of tracking data is selected, make plots
             plt.figure(1)
             plt.subplot(211)
             plt.plot(t, ballR, 'r1')
-            #plt.plot(t, modelR, 'b')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$r$")
 
             plt.subplot(212)
             plt.plot(t, ballTheta, 'r1')
-            #plt.plot(t, modelTheta, 'b')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$\theta$")
             plt.savefig(fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
-
-        #modelX = modelR*np.cos(modelTheta)
-        #modelY = modelR*np.sin(modelTheta)
 
         if makePlots:
             plt.figure(2)
             plt.subplot(211)
             plt.plot(t, ballX, 'r1')
-            #plt.plot(t, modelX, 'k')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$x$")
             plt.subplot(212)
             plt.plot(t, ballY, 'b1')
-            #plt.plot(t, modelY, 'k')
             plt.xlabel(r"$t$ (s)")
             plt.ylabel(r"$y$")
             plt.savefig(fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
