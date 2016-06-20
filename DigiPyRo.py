@@ -286,6 +286,10 @@ def splineFit(x, y, deg):
         yfit += fit[i]*(x**(deg-i))
     return yfit
 
+#####################
+### Main function ###
+#####################
+
 def start():
     vid = cv2.VideoCapture(filenameVar.get())
 
