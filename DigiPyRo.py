@@ -156,8 +156,7 @@ def annotateImg(img, i):
     dproLoc = (25, 50)
     cv2.putText(img, dpro, dproLoc, font, 1, (255, 255, 255), 1)
     
-    #img[(height-25)-spinlab.shape[0]:height-25, (width-25)-spinlab.shape[1]:width-25] = spinlab
-    #img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
+    img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
 
     #perStamp = 'Period (T): ' + str(round(per,1)) + ' s'
     #perLoc = (25, height-75)
@@ -280,7 +279,7 @@ def start():
 
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
     npts = 0
-    #spinlab = cv2.imread('/Users/sammay/Desktop/SPINLab/DigiRo/spinlogo.png')
+    spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png')
     width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
     #width = 1280
@@ -289,6 +288,8 @@ def start():
     fileName = savefileVar.get()
     fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
     video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height))
+
+    spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC)
 
     global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask
     naturalRPM = tableRPMVar.get()
@@ -536,12 +537,15 @@ def start():
                 angle = np.arctan2(uySmooth[index],uxSmooth[index])
                 rad = rInertSmooth[index]
                 (lineEndX[index], lineEndY[index]) = (int(0.5+center[0]+ballX[index]+(rad*np.sin(angle))), int(0.5+center[1]+ballY[index]-(rad*np.cos(angle))))
-                if index < 50:
+                if index < 25:
                     numLines = index
                 else:
-                    numLines = 50
+                    numLines = 25
                 for j in range(numLines):
-                    cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
+                    if i > 2:
+                        cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
+                    elif i < numFrames - 3:
+                        cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
                 index+=1
             video_writer.write(frame)
     else:
