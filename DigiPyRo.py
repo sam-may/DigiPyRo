@@ -1,6 +1,7 @@
 # DigiPyRo is a program with two main functions:
 # 1. Digital rotation of movies.
 # 2. Single-particle tracking.
+# All of its functionalities can be accessed through the GUI window which appears when DigiPyRo is run.
 # See the README and instructables for further documentation, installation instructions and examples.
 
 
@@ -19,6 +20,11 @@ from scipy.optimize import leastsq
 ### Helper Functions ###
 ########################
 
+## Helper Functions: Section 1 -- User-Interaction Functions
+## The majority of functions in this section relate to user-identification of the region of interest (ROI) which will be digitally rotated,
+## or the intialization of single-particle tracking
+
+# Allows user to manually identify center of rotation
 def centerClick(event, x, y, flags, param):
     global center, frame
     clone = frame.copy()
@@ -34,6 +40,7 @@ def centerImg(img, x_c, y_c): # shifts image so that it is centered at (x_c, y_c
     shiftMatrix = np.float32([[1, 0, dx], [0, 1, dy]])
     return cv2.warpAffine(img, shiftMatrix, (width, height))
 
+# User drags mouse and releases along a diameter of the particle to set an approximate size and location of particle for DPR to search for
 def locate(event, x, y, flags, param):
     global frame, particleStart, particleEnd, particleCenter, particleRadius
     clone = frame.copy()
@@ -48,6 +55,7 @@ def locate(event, x, y, flags, param):
         cv2.imshow('Locate Ball', frame)
         frame = clone.copy() # resets to original image
 
+# User clicks points along the circumference of a circular ROI. This function records the points and calculates the best-fit circle through the points.
 def circumferencePoints(event, x, y, flags, param):
     global npts, center, frame, xpoints, ypoints, r, poly1, poly2
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -75,7 +83,8 @@ def circumferencePoints(event, x, y, flags, param):
             cv2.circle(frame, center, r, (0,255,0), 1)
         cv2.imshow('CenterClick', frame) 
         frame = clone.copy()
-
+        
+# The same as "circumferencePoints", except this calculates a polygon ROI. The center is calculated as the "center of mass" of the polygon
 def nGon(event, x, y, flags, param):
     global npts, center, frame, xpoints, ypoints, r, poly1, poly2
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -101,7 +110,7 @@ def nGon(event, x, y, flags, param):
         cv2.imshow('CenterClick', frame) 
         frame = clone.copy()
 
- 
+# Removes the most recently clicked point in the array of circle/polygon circumference points. 
 def removePoint(orig):
     global npts, center, frame, xpoints, ypoints, r, poly1, poly2, custMask
     if npts == 0:
@@ -147,6 +156,7 @@ def removePoint(orig):
             cv2.circle(frame, center, r, (0,255,0), 1)
         cv2.imshow('CenterClick', frame)
 
+# Calculates the center and radius of the best-fit circle through an array of points (by least-squares method)
 def calc_center(xp, yp):
     n = len(xp)
     circleMatrix = np.matrix([[np.sum(xp**2), np.sum(xp*yp), np.sum(xp)], [np.sum(xp*yp), np.sum(yp**2), np.sum(yp)], [np.sum(xp), np.sum(yp), n]])
@@ -161,6 +171,7 @@ def calc_center(xp, yp):
     diam = d**(0.5)
     return np.array([int(xc), int(yc), int(diam/2)])
 
+# Adds diagnostic information, including time and physical/digital rotations to each frame of the movie
 def annotateImg(img, i):
     font = cv2.FONT_HERSHEY_TRIPLEX
 
@@ -170,10 +181,6 @@ def annotateImg(img, i):
     
     img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
 
-    #perStamp = 'Period (T): ' + str(round(per,1)) + ' s'
-    #perLoc = (25, height-75)
-    #cv2.putText(img, perStamp, perLoc, font, 1, (255, 255, 255), 1)
-    #timestamp = 'Time: ' + str(round(((i/fps)/per),1)) + ' T'
     timestamp = 'Time: ' + str(round((i/fps),1)) + ' s'
     tLoc = (width - 225, height-25)
     cv2.putText(img, timestamp, tLoc, font, 1, (255, 255, 255), 1)
@@ -198,9 +205,10 @@ def annotateImg(img, i):
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, crpm, cLoc, font, 1, (255, 255, 255), 1)
 
+# Displays instructions on the screen for identifying the circle/polygon of interest
 def instructsCenter(img):
     font = cv2.FONT_HERSHEY_PLAIN
-    line1 = 'Click on 3 or more points along the border of the circle'
+    line1 = 'Click on 3 or more points along the border of the circle or polygon'
     line1Loc = (25, 50)
     line2 = 'around which the movie will be rotated.'
     line2Loc = (25, 75)
@@ -214,6 +222,7 @@ def instructsCenter(img):
     cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line4, line4Loc, font, 1, (255, 255, 255), 1)
 
+# Displays instructions for drawing a circle around the ball.
 def instructsBall(img):
     font = cv2.FONT_HERSHEY_PLAIN
     line1 = 'Click and drag to create a circle around the ball.'
@@ -229,7 +238,28 @@ def instructsBall(img):
     cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line4, line4Loc, font, 1, (255, 255, 255), 1)
+    
+## Helper Functions: Section 2 -- Mathematical Utility Functions
 
+# 2nd-order central difference method for calculating the derivative of unevenly spaced data
+def calcDeriv(f, t):
+    df = np.empty(len(f))
+    df[0] = (f[1] - f[0]) / (t[1] - t[0])
+    df[len(f)-1] = (f[len(f)-1] - f[len(f)-2]) / (t[len(f)-1] - t[len(f)-2])
+    df[1:len(f)-1] = f[0:len(f)-2]*((t[1:len(f)-1] - t[2:len(f)]) / ((t[0:len(f)-2] - t[1:len(f)-1])*(t[0:len(f)-2] - t[2:len(f)]))) + f[1:len(f)-1]*(((2*t[1:len(f)-1]) - t[0:len(f)-2] - t[2:len(f)]) / ((t[1:len(f)-1] - t[0:len(f)-2])*(t[1:len(f)-1] - t[2:len(f)]))) + f[2:len(f)]*((t[1:len(f)-1] - t[0:len(f)-2]) / ((t[2:len(f)] - t[0:len(f)-2])*(t[2:len(f)] - t[1:len(f)-1]))) 
+    return df
+
+# Calculates a polynomial fit of degree "deg" though an array of data "y" with corresponding x values "x"
+def splineFit(x, y, deg):
+    fit = np.polyfit(x, y, deg)
+    yfit = np.zeros(len(y))
+    for i in range(deg+1):
+        yfit += fit[i]*(x**(deg-i))
+    return yfit
+
+
+# The following functions assist in estimating the coefficient of friction of the user's table by fitting their data
+# to a damped harmonic oscillator. This functionality is not implemented in the current release of DigiPyRo
 def errFuncPolar(params, data):
     modelR = np.abs(params[0]*np.exp(-data[0]*params[3]*params[1])*np.cos((params[3]*data[0]*((1-(params[1]**2))**(0.5))) - params[2]))
     modelTheta = createModelTheta(data[0], params, data[2][0])
@@ -269,43 +299,26 @@ def createModelTheta(t, bestfit, thetai):
      
     return theta
 
-def calcDeriv2(f, t):
-    return np.gradient(f) / np.gradient(t)
-
-def calcDeriv(f, t):
-    df = np.empty(len(f))
-    df[0] = (f[1] - f[0]) / (t[1] - t[0])
-    df[len(f)-1] = (f[len(f)-1] - f[len(f)-2]) / (t[len(f)-1] - t[len(f)-2])
-    df[1:len(f)-1] = f[0:len(f)-2]*((t[1:len(f)-1] - t[2:len(f)]) / ((t[0:len(f)-2] - t[1:len(f)-1])*(t[0:len(f)-2] - t[2:len(f)]))) + f[1:len(f)-1]*(((2*t[1:len(f)-1]) - t[0:len(f)-2] - t[2:len(f)]) / ((t[1:len(f)-1] - t[0:len(f)-2])*(t[1:len(f)-1] - t[2:len(f)]))) + f[2:len(f)]*((t[1:len(f)-1] - t[0:len(f)-2]) / ((t[2:len(f)] - t[0:len(f)-2])*(t[2:len(f)] - t[1:len(f)-1]))) 
-    return df
-
-def splineFit(x, y, deg):
-    fit = np.polyfit(x, y, deg)
-    yfit = np.zeros(len(y))
-    for i in range(deg+1):
-        yfit += fit[i]*(x**(deg-i))
-    return yfit
-
 #####################
 ### Main function ###
 #####################
 
 def start():
-    vid = cv2.VideoCapture(filenameVar.get())
+    vid = cv2.VideoCapture(filenameVar.get()) # input video
 
-    global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts
-    npts = 0
-    spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png')
-    width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
-    height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+    global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
+    npts = 0 # number of user-clicked points along circumference of circle/polygon
+    spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png') # spinlab logo to display in upper right corner of output video
+    width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)) 
+    height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)) # read the width and height of input video. output video will have matching dimensions
     fps = fpsVar.get()
     fileName = savefileVar.get()
-    fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
-    video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height))
+    fourcc = cv2.cv.CV_FOURCC('m','p','4','v') # codec for output video
+    video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height)) # VideoWriter object for editing and saving the output video
 
-    spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC)
+    spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC) # resize spinlab logo based on input video dimensions
 
-    global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask
+    global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
     naturalRPM = tableRPMVar.get()
     naturalOmega = (naturalRPM * 2*np.pi)/60
     physicalRPM = physRPMVar.get()
@@ -542,6 +555,10 @@ def start():
             video_writer.write(frame)
     
     video_writer.release()
+
+#######################
+### Create GUI menu ###
+#######################
 
 root = Tk()
 root.title('DigiPyRo')
