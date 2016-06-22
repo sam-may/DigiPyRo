@@ -14,6 +14,7 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import scipy as sp
 from scipy.optimize import leastsq
+import time
 
 
 ########################
@@ -304,7 +305,8 @@ def createModelTheta(t, bestfit, thetai):
 #####################
 
 def start():
-    vid = cv2.VideoCapture(filenameVar.get()) # input video
+    filename = filenameVar.get()
+    vid = cv2.VideoCapture(filename) # input video
 
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
     npts = 0 # number of user-clicked points along circumference of circle/polygon
@@ -480,6 +482,10 @@ def start():
         dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta, utot])
 
         dataFile = open(fileName+'_data.txt', 'w')
+        dataFile.write('DigiPyRo Run Details \n \n')
+        dataFile.write('Original File: ' + filename + '\n' + 'Output File: ' + fileName + '\n')
+        dataFile.write('Date of run: ' + time.strftime("%c") + '\n \n')
+        dataFile.write('Original rotation of camera: ' + str(camRPM) + ' RPM\n' + 'Added digital rotation: ' + str(digiRPM) + ' RPM\n' + 'Curvature of surface: ' + str(naturalRPM) + ' RPM\n' + '\n' + 'Particle Tracking Data' + '\n') 
         dataFile.write('t x y r theta u_x u_y u_r u_theta ||u||\n')
         
         for i in range(len(ballX)):
