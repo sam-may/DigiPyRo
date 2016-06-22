@@ -188,21 +188,14 @@ def annotateImg(img, i):
 
     crpm = 'Original Rotation of Camera: '
     crpm += str(camRPM) + 'RPM'
-
-    prpm = 'Physical Rotation: '
-    if (physicalRPM > 0):
-        prpm += '+'
-    prpm += str(physicalRPM) + 'RPM'
     
     drpm = 'Additional Digital Rotation: '
     if (digiRPM > 0):
         drpm += '+'
     drpm += str(digiRPM) + 'RPM'
 
-    cLoc = (25, height - 105)
-    pLoc = (25, height - 25)
+    cLoc = (25, height - 25)
     dLoc = (25, height - 65)
-    cv2.putText(img, prpm, pLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, crpm, cLoc, font, 1, (255, 255, 255), 1)
 
@@ -342,18 +335,21 @@ def start():
     # Close GUI window so rest of program can run
     root.destroy()
 
-    global center, frame, xpoints, ypoints, r, poly1, poly2
+    global center, frame, xpoints, ypoints, r, poly1, poly2 # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
 
     # Open first frame from video, user will click on center
-    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
-    ret, frame = vid.read()
-    frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
+    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # set the first frame to correspond to the user-selected start time
+    ret, frame = vid.read() # read the first frame from the input video
+    frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC) # ensure frame is correct dimensions
     cv2.namedWindow('CenterClick')
+
+    # Use the appropriate mask-selecting function (depending on whether custom-shaped mask is checked)
     if custMask:
         cv2.setMouseCallback('CenterClick', nGon)
     else:
         cv2.setMouseCallback('CenterClick', circumferencePoints)
 
+    # Append instructions to screen
     instructsCenter(frame)
     orig = frame.copy()
     while(1):
@@ -366,7 +362,7 @@ def start():
 
     cv2.destroyWindow('CenterClick')
 
-    # Select initial position of ball
+    # Select initial position of ball (only if particle tracking is selected)
     if trackBall:
         vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
         ret, frame = vid.read()
@@ -379,35 +375,43 @@ def start():
         cv2.waitKey(0)
         cv2.destroyWindow('Locate Ball')
 
-    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset video to first frame
+
+    # allocate empty arrays for particle-tracking data
     t = np.empty(numFrames)
     ballX = np.empty(numFrames)
     ballY = np.empty(numFrames)
     if trackBall:
         ballPts = 0 #will identify the number of times that Hough Circle transform identifies the ball
-        lastLoc = particleCenter
+        lastLoc = particleCenter # most recent location of particle, initialized to the location the user selected
         thresh = 50
         trackingData = np.zeros(numFrames) # logical vector which tells us if the ball was tracked at each frame
     framesArray = np.empty((numFrames,height,width,3), np.uint8)
+    
+    # Go through the input movie frame by frame and do the following: (1) digitally rotate, (2) apply mask, (3) center the image about the point of rotation, (4) search for particle and record tracking results
     for i in range(numFrames):
+        # Read + resize current frame
         ret, frame = vid.read() # read next frame from video
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
-        if totRPM != 0:
+
+        # (1) and (2) (the order they are applied depends on whether the movie is derotated)
+        if totRPM != 0: # Case 1: the mask is applied before rotation so it co-rotates with the additional digital rotation
             cv2.fillPoly(frame, np.array([poly1, poly2]), 0) # black out everything outside the region of interest
             cv2.circle(frame, center, 4, (255,0,0), -1) # place a circle at the center of rotation
         
-
         if addRot:
             M = cv2.getRotationMatrix2D(center, i*dtheta, 1.0)
             frame = cv2.warpAffine(frame, M, (width, height))
-            if totRPM == 0:
+            if totRPM == 0: # Case 2: the movie is de-rotated, we want to apply the mask after digital rotation so it is stationary
                 cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
         
+        # (3)
         frame = centerImg(frame, center[0], center[1]) # center the image
     
     
         centered = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC) # ensure the frame is the correct dimensions
         
+        # (4)
         if trackBall: # if tracking is turned on, apply tracking algorithm
             gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY) # convert to black and whitee
             gray = cv2.medianBlur(gray,5) # blur image. this allows for better identification of circles
@@ -424,30 +428,47 @@ def start():
                         ballPts += 1
                         trackingData[i] = 1
                         break
-           
+            
+            # mark the frame with dots to indicate the particle path
             for k in range(ballPts-1):
                 cv2.circle(centered, (int(ballX[k]), int(ballY[k])), 1, (255,0,0), -1)    	
 
 
-        annotateImg(centered, i)
-        framesArray[i] = centered
+        annotateImg(centered, i) # apply diagnostic information and logos to each frame
+        framesArray[i] = centered # save each frame in an array so that we can loop back through later and add the inertial radius
 
+    # Done looping through video
+
+    # Reformat tracking data
     if trackBall:
-        ballX = ballX[0:ballPts]
+        ballX = ballX[0:ballPts] # shorten the array to only the part which contains tracking info
         ballY = ballY[0:ballPts]
         t = t[0:ballPts]
-        ballX -= center[0]
-        ballY -= center[1]
+        ballX -= center[0] # set the center of rotation as the origin
+        ballY -= center[1] # "                                      "
     
-        ballR = ((ballX**2)+(ballY**2))**(0.5)
-        ballTheta = np.arctan2(ballY, ballX)
-        for i in range(len(ballTheta)):
+        ballR = ((ballX**2)+(ballY**2))**(0.5) # convert to polar coordinates
+        ballTheta = np.arctan2(ballY, ballX)   # "                          "
+        for i in range(len(ballTheta)):        # ensure that the azimuthal coordinate is in the range [0, 2*pi]
             if ballTheta[i] < 0:
                 ballTheta[i] += 2*np.pi
 
-        fTh = 2*totOmega
+        # Calculate velocities
+        ux = calcDeriv(ballX, t)
+        uy = calcDeriv(ballY, t)
+        ur = calcDeriv(ballR, t)
+        utheta = calcDeriv(ballTheta, t)
+        utot = ((ux**2)+(uy**2))**(0.5)
 
-        if makePlots: # if option to make plots of tracking data is selected, make plots
+        fTh = 2*totOmega                           # theoretical inertial frequency
+        rInert = utot / fTh                        # inertial radius, a combination of theory (fTh) and data (utot)
+        rInertSmooth = splineFit(t, rInert, 20)    # polynomial fit of degree 20 (provides a smooth fit through the data and solves the uneven sampling problem)
+        uxSmooth = splineFit(t, ux, 20)
+        uySmooth = splineFit(t, uy, 20)
+
+
+        # If option to make plots of tracking data is selected, make plots
+        if makePlots:
             plt.figure(1)
             plt.subplot(211)
             plt.plot(t, ballR, 'r1')
@@ -460,7 +481,6 @@ def start():
             plt.ylabel(r"$\theta$")
             plt.savefig(fileName+'_polar.pdf', format = 'pdf', dpi = 1200)
 
-        if makePlots:
             plt.figure(2)
             plt.subplot(211)
             plt.plot(t, ballX, 'r1')
@@ -472,37 +492,6 @@ def start():
             plt.ylabel(r"$y$")
             plt.savefig(fileName+'_cartesian.pdf', format = 'pdf', dpi =1200)   
 
-        ux = calcDeriv(ballX, t)
-        uy = calcDeriv(ballY, t)
-        ur = calcDeriv(ballR, t)
-        utheta = calcDeriv(ballTheta, t)
-        utot = ((ux**2)+(uy**2))**(0.5)
-
-        dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta, utot])
-
-        dataFile = open(fileName+'_data.txt', 'w')
-        dataFile.write('DigiPyRo Run Details \n \n')
-        dataFile.write('Original File: ' + filename + '\n' + 'Output File: ' + fileName + '\n')
-        dataFile.write('Date of run: ' + time.strftime("%c") + '\n \n')
-        dataFile.write('Original rotation of camera: ' + str(camRPM) + ' RPM\n' + 'Added digital rotation: ' + str(digiRPM) + ' RPM\n' + 'Curvature of surface: ' + str(naturalRPM) + ' RPM\n' + '\n' + 'Particle Tracking Data' + '\n') 
-        dataFile.write('t x y r theta u_x u_y u_r u_theta ||u||\n')
-        
-        for i in range(len(ballX)):
-            for j in range(len(dataList)):
-                entry = "%.2f" % dataList[j][i]
-                if j < len(dataList) - 1:
-                    dataFile.write(entry + ' ')
-                else:
-                    dataFile.write(entry + '\n')
-        dataFile.close()
-
-        rInert = utot / fTh # inertial radius
-        rInertSmooth = splineFit(t, rInert, 20)
-        uxSmooth = splineFit(t, ux, 20)
-        uySmooth = splineFit(t, uy, 20)
-
-
-        if makePlots:
             plt.figure(3)
             plt.subplot(221)
             plt.plot(t, ux, label=r"$u_x$")
@@ -526,11 +515,31 @@ def start():
             plt.tight_layout(pad = 1, h_pad = 0.5, w_pad = 0.5)
             plt.savefig(fileName+'_derivs.pdf', format = 'pdf', dpi =1200)
 
-    cv2.destroyAllWindows()
-    vid.release()
 
-    # Loop through video and report inertial radius
-    if trackBall and totRPM != 0:
+        # Record tracking data in a .txt file
+        dataList = np.array([t, ballX, ballY, ballR, ballTheta, ux, uy, ur, utheta, utot])
+
+        dataFile = open(fileName+'_data.txt', 'w')
+        dataFile.write('DigiPyRo Run Details \n \n')
+        dataFile.write('Original File: ' + filename + '\n' + 'Output File: ' + fileName + '\n')
+        dataFile.write('Date of run: ' + time.strftime("%c") + '\n \n')
+        dataFile.write('Original rotation of camera: ' + str(camRPM) + ' RPM\n' + 'Added digital rotation: ' + str(digiRPM) + ' RPM\n' + 'Curvature of surface: ' + str(naturalRPM) + ' RPM\n' + '\n' + 'Particle Tracking Data' + '\n') 
+        dataFile.write('t x y r theta u_x u_y u_r u_theta ||u||\n')
+        
+        for i in range(len(ballX)):
+            for j in range(len(dataList)):
+                entry = "%.2f" % dataList[j][i]
+                if j < len(dataList) - 1:
+                    dataFile.write(entry + ' ')
+                else:
+                    dataFile.write(entry + '\n')
+        dataFile.close()
+
+    cv2.destroyAllWindows()	# close any open windows
+    vid.release()		# release the video
+
+    # Loop through video and report inertial radius 
+    if trackBall and totRPM != 0:	# only do this if particle tracking is selected and the inertial radius is not infinite (happens when totRPM = 0)
         index=0
         lineStartX = np.empty(ballPts, dtype=np.int16)
         lineStartY = np.empty(ballPts, dtype=np.int16)
