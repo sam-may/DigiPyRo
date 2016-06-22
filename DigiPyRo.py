@@ -539,6 +539,9 @@ def start():
     vid.release()		# release the video
 
     # Loop through video and report inertial radius 
+    numRadii = 25 			# number of inertial radii which will be shown at one time on the screen
+    rInertSmooth[0:3] = 0
+    rInertSmooth[ballPts-3:ballPts] = 0 # the first and last few inertial radii tend to have very large systematic errors. Set them to 0 so that they are not shown
     if trackBall and totRPM != 0:	# only do this if particle tracking is selected and the inertial radius is not infinite (happens when totRPM = 0)
         index=0
         lineStartX = np.empty(ballPts, dtype=np.int16)
@@ -552,15 +555,12 @@ def start():
                 angle = np.arctan2(uySmooth[index],uxSmooth[index])
                 rad = rInertSmooth[index]
                 (lineEndX[index], lineEndY[index]) = (int(0.5+center[0]+ballX[index]+(rad*np.sin(angle))), int(0.5+center[1]+ballY[index]-(rad*np.cos(angle))))
-                if index < 25:
+                if index < numRadii:
                     numLines = index
                 else:
-                    numLines = 25
+                    numLines = numRadii
                 for j in range(numLines):
-                    if i > 2:
-                        cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
-                    elif i < numFrames - 3:
-                        cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
+                    cv2.line(frame, (lineStartX[index-j], lineStartY[index-j]), (lineEndX[index-j], lineEndY[index-j]), (int(255), int(255), int(255)), 1)
                 index+=1
             video_writer.write(frame)
     else:
