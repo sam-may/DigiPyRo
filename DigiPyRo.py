@@ -323,10 +323,9 @@ def start():
     global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
     naturalRPM = tableRPMVar.get()
     naturalOmega = (naturalRPM * 2*np.pi)/60
-    physicalRPM = physRPMVar.get()
     camRPM = camRPMVar.get()
     digiRPM = digiRPMVar.get()
-    curvRPM = naturalRPM - np.abs(physicalRPM)
+    curvRPM = naturalRPM
     totRPM = camRPM + digiRPM
     totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
@@ -578,20 +577,16 @@ tableRPMEntry.grid(row=0, column=1)
 tableLabel.grid(row=0, column=0)
 
 digiRPMVar = DoubleVar()
-physRPMVar = DoubleVar()
 camRPMVar  = DoubleVar()
 digiRPMEntry = Entry(root, textvariable=digiRPMVar)
 physRPMEntry = Entry(root, textvariable=physRPMVar)
 camRPMEntry  = Entry(root, textvariable=camRPMVar)
 digiLabel = Label(root, text="Additional digital rotation (RPM):")
-physLabel = Label(root, text="Physical rotation (of experiment, RPM):")
 camLabel  = Label(root, text="Physical rotation (of camera, RPM):")
 digiRPMEntry.grid(row=2, column=1)
-physRPMEntry.grid(row=1, column=1)
-camRPMEntry.grid(row=1, column=3)
+camRPMEntry.grid(row=1, column=1)
 digiLabel.grid(row=2, column=0)
-physLabel.grid(row=1, column=0)
-camLabel.grid(row=1, column=2)
+camLabel.grid(row=1, column=0)
 
 customMaskVar = BooleanVar()
 customMaskEntry = Checkbutton(root, text="Custom-Shaped Mask (checking this box allows for a polygon-shaped mask. default is circular)", variable=customMaskVar)
