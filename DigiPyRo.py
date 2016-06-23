@@ -35,7 +35,8 @@ def centerClick(event, x, y, flags, param):
         cv2.imshow('CenterClick', frame)
         frame = clone.copy() # resets to original image so that if the user reselects the center, the old circle will not appear
 
-def centerImg(img, x_c, y_c): # shifts image so that it is centered at (x_c, y_c)
+# Shifts image so that it is centered at (x_c, y_c)
+def centerImg(img, x_c, y_c):
     dx = (width/2) - x_c
     dy = (height/2) - y_c
     shiftMatrix = np.float32([[1, 0, dx], [0, 1, dy]])
@@ -296,9 +297,10 @@ def createModelTheta(t, bestfit, thetai):
 #####################
 ### Main function ###
 #####################
+# This function is executed when the user presses the "Start!" button on the GUI
 
 def start():
-    filename = filenameVar.get()
+    filename = filenameVar.get()     # get full path to input video
     vid = cv2.VideoCapture(filename) # input video
 
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
@@ -318,7 +320,6 @@ def start():
     naturalOmega = (naturalRPM * 2*np.pi)/60
     camRPM = camRPMVar.get()
     digiRPM = digiRPMVar.get()
-    curvRPM = naturalRPM
     totRPM = camRPM + digiRPM
     totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
