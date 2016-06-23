@@ -44,12 +44,15 @@ def centerImg(img, x_c, y_c):
 
 # User drags mouse and releases to indicate a conversion factor between pixels and units of distance
 def unitConversion(event, x, y, flags, param):
-    global frame, uStart, uEnd
+    global frame, uStart, uEnd, unitCount, unitType, unitConv
     clone = frame.copy()
     if event == cv2.EVENT_LBUTTONDOWN:
         uStart = (x,y)
     elif event == cv2.EVENT_LBUTTONUP:
         uEnd = (x,y)
+        d2 = ((uEnd[0] - uStart[0])**2) + ((uEnd[1] - uStart[1])**2)
+        pixelLength = (d2**(0.5))/2
+        unitConv = unitCount / pixelLength
         cv2.line(frame, uStart, uEnd, (255,0,0), 1)
         cv2.imshow('Distance Calibration', frame)
         frame = clone.copy()
@@ -245,6 +248,23 @@ def instructsBall(img):
     cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, line4, line4Loc, font, 1, (255, 255, 255), 1)
+
+# Displays instructions for drawing a line for unit conversion
+def instructsUnit(img):
+    font = cv2.FONT_HERSHEY_PLAIN
+    line1 = 'Click and release to draw a line of'
+    line1Loc = (25, 50)
+    line2 = str(unitCount) + ' ' + unitType
+    line2Loc = (25, 75)
+    line3 = 'Press ENTER when done.'
+    line3Loc = (25, 100)
+
+    cv2.putText(img, line1, line1Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line2, line2Loc, font, 1, (255, 255, 255), 1)
+    cv2.putText(img, line3, line3Loc, font, 1, (255, 255, 255), 1)
+
+
+
     
 ## Helper Functions: Section 2 -- Mathematical Utility Functions
 
@@ -327,7 +347,7 @@ def start():
 
     spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC) # resize spinlab logo based on input video dimensions
 
-    global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
+    global naturalRPM, physicalRPM, digiRPM, camRPM, dtheta, per, custMask, changeUnits, unitType, unitCount, unitConv # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
     naturalRPM = tableRPMVar.get()
     naturalOmega = (naturalRPM * 2*np.pi)/60
     camRPM = camRPMVar.get()
@@ -336,6 +356,10 @@ def start():
     totOmega = (totRPM *2*np.pi)/60
     dtheta = digiRPM*(6/fps)
     addRot = digiRPM != 0
+
+    unitType = unitTypeVar.get()
+    unitCount = unitCountVar.get()
+    unitConv = 1 			# intialize to 1 in the case that no unit conversion is selected
 
     startFrame = fps*startTimeVar.get()
     if startFrame == 0:
@@ -387,6 +411,19 @@ def start():
         cv2.imshow('Locate Ball', frame)
         cv2.waitKey(0)
         cv2.destroyWindow('Locate Ball')
+
+    # Draw a line to calculate a pixel-to-distance conversion factor
+    if changeUnits:
+        vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+        ret, frame = vid.read()
+        frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
+        cv2.namedWindow('Distance Calibration')
+        cv2.setMouseCallBack('Distance Calibration', unitConversion)
+        
+        instructsUnit(frame)
+        cv2.imshow('Distance Calibration', frame)
+        cv2.waitKey(0)
+        cv2.destroyWindow('Distance Calibration')
 
     vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset video to first frame
 
@@ -459,6 +496,10 @@ def start():
         t = t[0:ballPts]
         ballX -= center[0] # set the center of rotation as the origin
         ballY -= center[1] # "                                      "
+        
+        # Convert from pixels to units of distance
+        ballX *= unitConv
+        ballY *= unitConv
     
         ballR = ((ballX**2)+(ballY**2))**(0.5) # convert to polar coordinates
         ballTheta = np.arctan2(ballY, ballX)   # "                          "
