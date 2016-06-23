@@ -27,13 +27,13 @@ import time
 
 # Allows user to manually identify center of rotation
 def centerClick(event, x, y, flags, param):
-    global center, frame
-    clone = frame.copy()
-    if event == cv2.EVENT_LBUTTONDOWN:
-        center = (x,y)
-        cv2.circle(frame, (x,y), 4, (255,0,0), -1)
-        cv2.imshow('CenterClick', frame)
-        frame = clone.copy() # resets to original image so that if the user reselects the center, the old circle will not appear
+    global center, frame			# declare these variables as global so that they can be used by various functions without being passed explicitly
+    clone = frame.copy()			# save the original frame
+    if event == cv2.EVENT_LBUTTONDOWN:		# if user clicks 
+        center = (x,y)				# set click location as center
+        cv2.circle(frame, (x,y), 4, (255,0,0), -1) # draw circle at center
+        cv2.imshow('CenterClick', frame)	# show updated image
+        frame = clone.copy() 			# resets to original image so that if the user reselects the center, the old circle will not appear
 
 # Shifts image so that it is centered at (x_c, y_c)
 def centerImg(img, x_c, y_c):
@@ -44,40 +44,40 @@ def centerImg(img, x_c, y_c):
 
 # User drags mouse and releases along a diameter of the particle to set an approximate size and location of particle for DPR to search for
 def locate(event, x, y, flags, param):
-    global frame, particleStart, particleEnd, particleCenter, particleRadius
-    clone = frame.copy()
-    if event == cv2.EVENT_LBUTTONDOWN:
-        particleStart = (x,y)
-    elif event == cv2.EVENT_LBUTTONUP:
-        particleEnd = (x,y)
-        particleCenter = ((particleEnd[0] + particleStart[0])/2, (particleEnd[1] + particleStart[1])/2)
+    global frame, particleStart, particleEnd, particleCenter, particleRadius	# declare these variables as global so that they can be used by various functions without being passed explicitly
+    clone = frame.copy()							# save the original frame
+    if event == cv2.EVENT_LBUTTONDOWN:						# if user clicks
+        particleStart = (x,y)							# record location
+    elif event == cv2.EVENT_LBUTTONUP:						# if user releases click
+        particleEnd = (x,y)							# record location
+        particleCenter = ((particleEnd[0] + particleStart[0])/2, (particleEnd[1] + particleStart[1])/2)  # define the center as the midpoint between start and end points
         d2 = ((particleEnd[0] - particleStart[0])**2) + ((particleEnd[1] - particleStart[1])**2)
         particleRadius = (d2**(0.5))/2
-        cv2.circle(frame, particleCenter, int(particleRadius+0.5), (255,0,0), 1)
-        cv2.imshow('Locate Ball', frame)
-        frame = clone.copy() # resets to original image
+        cv2.circle(frame, particleCenter, int(particleRadius+0.5), (255,0,0), 1)	# draw circle that shows the radius and location of cirlces that the Hough circle transform will search for
+        cv2.imshow('Locate Ball', frame)					  	# show updated image
+        frame = clone.copy() 								# resets to original image
 
 # User clicks points along the circumference of a circular ROI. This function records the points and calculates the best-fit circle through the points.
 def circumferencePoints(event, x, y, flags, param):
-    global npts, center, frame, xpoints, ypoints, r, poly1, poly2
-    if event == cv2.EVENT_LBUTTONDOWN:
-        if (npts == 0):
+    global npts, center, frame, xpoints, ypoints, r, poly1, poly2		# declare these variables as global so that they can be used by various functions without being passed explicitly
+    if event == cv2.EVENT_LBUTTONDOWN:						# if user clicks
+        if (npts == 0):								# if this is the first point, intialize the arrays of x-y coords
             xpoints = np.array([x])
             ypoints = np.array([y])
-        else:
+        else:									# otherwise, append the points to the arrays
             xpoints = np.append(xpoints,x)
             ypoints = np.append(ypoints,y)
         npts+=1
         cv2.circle(frame, (x,y), 3, (0,255,0), -1)
         clone = frame.copy()
-        if (len(xpoints) > 2):
+        if (len(xpoints) > 2):							# if there are more than 2 points, calculate the best-fit circle through the points
             bestfit = calc_center(xpoints, ypoints)
             center = (bestfit[0], bestfit[1])
             r = bestfit[2]
             poly1 = np.array([[0,0],[frame.shape[1],0],[frame.shape[1],frame.shape[0]], [0,frame.shape[0]]])
             poly2 = np.array([[bestfit[0]+r,bestfit[1]]])
             circpts = 100
-            for i in range(1,circpts):
+            for i in range(1,circpts):						# approximate the circle as a 100-gon (which makes it easier to draw the mask, as we define the mask region as the area between two polygons)
                 theta =  2*np.pi*(float(i)/circpts)
                 nextpt = np.array([[int(bestfit[0]+(r*np.cos(theta))),int(bestfit[1]+(r*np.sin(theta)))]])
                 poly2 = np.append(poly2,nextpt,axis=0)
@@ -88,8 +88,8 @@ def circumferencePoints(event, x, y, flags, param):
         
 # The same as "circumferencePoints", except this calculates a polygon ROI. The center is calculated as the "center of mass" of the polygon
 def nGon(event, x, y, flags, param):
-    global npts, center, frame, xpoints, ypoints, r, poly1, poly2
-    if event == cv2.EVENT_LBUTTONDOWN:
+    global npts, center, frame, xpoints, ypoints, r, poly1, poly2 		# declare these variables as global so that they can be used by various functions without being passed explicitly
+    if event == cv2.EVENT_LBUTTONDOWN:						# if user clicks
         if (npts == 0):
             xpoints = np.array([x])
             ypoints = np.array([y])
@@ -133,7 +133,7 @@ def removePoint(orig):
     frame = orig.copy()
     for i in range(len(xpoints)):
         cv2.circle(frame, (xpoints[i], ypoints[i]), 3, (0,255,0), -1)
-    if (len(xpoints) > 2):
+    if (len(xpoints) > 2):							# if there are more than 2 points after removing the most recent point, recalculate the center of rotation and the mask region
         if custMask:
             poly1 = np.array([[0,0],[frame.shape[1],0],[frame.shape[1],frame.shape[0]], [0,frame.shape[0]]])
             poly2 = np.array([[xpoints[0],ypoints[0]]])
