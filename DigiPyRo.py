@@ -357,6 +357,7 @@ def start():
     dtheta = digiRPM*(6/fps)
     addRot = digiRPM != 0
 
+    changeUnits = unitVar.get()
     unitType = unitTypeVar.get()
     unitCount = unitCountVar.get()
     unitConv = 1 			# intialize to 1 in the case that no unit conversion is selected
@@ -418,7 +419,7 @@ def start():
         ret, frame = vid.read()
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
         cv2.namedWindow('Distance Calibration')
-        cv2.setMouseCallBack('Distance Calibration', unitConversion)
+        cv2.setMouseCallback('Distance Calibration', unitConversion)
         
         instructsUnit(frame)
         cv2.imshow('Distance Calibration', frame)
@@ -577,7 +578,8 @@ def start():
         dataFile.write('DigiPyRo Run Details \n \n')
         dataFile.write('Original File: ' + filename + '\n' + 'Output File: ' + fileName + '\n')
         dataFile.write('Date of run: ' + time.strftime("%c") + '\n \n')
-        dataFile.write('Original rotation of camera: ' + str(camRPM) + ' RPM\n' + 'Added digital rotation: ' + str(digiRPM) + ' RPM\n' + 'Curvature of surface: ' + str(naturalRPM) + ' RPM\n' + '\n' + 'Particle Tracking Data' + '\n') 
+        dataFile.write('Original rotation of camera: ' + str(camRPM) + ' RPM\n' + 'Added digital rotation: ' + str(digiRPM) + ' RPM\n' + 'Curvature of surface: ' + str(naturalRPM) + ' RPM\n' + '\n' + 'Particle Tracking Data')
+        dataFile.write(' in ' + unitType + ' and ' + unitType + '/s\n') 
         dataFile.write('t x y r theta u_x u_y u_r u_theta ||u||\n')
         
         for i in range(len(ballX)):
@@ -697,9 +699,9 @@ unitTypeLabel = Label(root, text="Length unit (e.g. cm, ft):")
 unitCountVar = DoubleVar()
 unitCountLabel = Label(root, text="Unit count:")
 unitCountEntry = Entry(root, textvariable = unitCountVar)
-unitTypeLabel.grid(row=9, column=0)
-unitTypeEntry.grid(row=9, column=1)
-unitCountLabel.grid(row=10, column=0)
-unitCountEntry.grid(row=10, column=1)
+unitTypeLabel.grid(row=8, column=1)
+unitTypeEntry.grid(row=8, column=2)
+unitCountLabel.grid(row=8, column=3)
+unitCountEntry.grid(row=8, column=4)
 
 root.mainloop()
