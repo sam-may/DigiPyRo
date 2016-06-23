@@ -42,6 +42,18 @@ def centerImg(img, x_c, y_c):
     shiftMatrix = np.float32([[1, 0, dx], [0, 1, dy]])
     return cv2.warpAffine(img, shiftMatrix, (width, height))
 
+# User drags mouse and releases to indicate a conversion factor between pixels and units of distance
+def unitConversion(event, x, y, flags, param):
+    global frame, uStart, uEnd
+    clone = frame.copy()
+    if event == cv2.EVENT_LBUTTONDOWN:
+        uStart = (x,y)
+    elif event == cv2.EVENT_LBUTTONUP:
+        uEnd = (x,y)
+        cv2.line(frame, uStart, uEnd, (255,0,0), 1)
+        cv2.imshow('Distance Calibration', frame)
+        frame = clone.copy()
+
 # User drags mouse and releases along a diameter of the particle to set an approximate size and location of particle for DPR to search for
 def locate(event, x, y, flags, param):
     global frame, particleStart, particleEnd, particleCenter, particleRadius	# declare these variables as global so that they can be used by various functions without being passed explicitly
@@ -578,7 +590,7 @@ def start():
 root = Tk()
 root.title('DigiPyRo')
 startButton = Button(root, text = "Start!", command = start)
-startButton.grid(row=8, column=0)
+startButton.grid(row=10, column=0)
 
 tableRPMVar = DoubleVar()
 tableRPMEntry = Entry(root, textvariable=tableRPMVar)
@@ -634,5 +646,19 @@ fpsEntry = Entry(root, textvariable=fpsVar)
 fpsLabel = Label(root, text="Frames per second of video:")
 fpsEntry.grid(row=7, column=1)
 fpsLabel.grid(row=7, column=0)
+
+unitVar = BooleanVar()
+unitEntry = Checkbutton(root, text="Add distance units calibration", variable=unitVar)
+unitEntry.grid(row=8,column=0)
+unitTypeVar = StringVar()
+unitTypeEntry = Entry(root, textvariable = unitTypeVar)
+unitTypeLabel = Label(root, text="Length unit (e.g. cm, ft):")
+unitCountVar = DoubleVar()
+unitCountLabel = Label(root, text="Unit count:")
+unitCountEntry = Entry(root, textvariable = unitCountVar)
+unitTypeLabel.grid(row=8, column=0)
+unitTypeEntry.grid(row=8, column=1)
+unitCountLabel.grid(row=9, column=0)
+unitCountEntry.grid(row=9, column=1)
 
 root.mainloop()
