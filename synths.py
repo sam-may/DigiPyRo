@@ -1,8 +1,8 @@
 # This program creates a synthetic .avi movie for use with DigiPyRo
 # The video shows a ball rolling on a parabolic surface
 # The user may change the length of the movie[1], the frame rate of the movie[2], the resolution of the movie[3] 
-# the frequency of oscillations[4]
-# and control the initial conditions of the roll [5]-[8]
+# the frequency of oscillations[4], the rotation rate of the reference frame[5]
+# and control the initial conditions of the roll [6]-[9]
 
 # Import necessary modules
 import cv2
@@ -28,12 +28,14 @@ height = 720    			# [3] Decrease the width and height for increased speed, incr
 rpm = 10.0                            	# [4] frequency of oscillations (in RPM). Good values might be 5-15
 					# NOTE: A two-dimensional rotating system naturally takes the shape of a parabola.
 					# The rotation rate determines the curvature of the parabola, which is why we define the curvature in terms of RPM
+rotRate = 10.0				# [5] rotation rate of camera. The two natural frames of reference are with rotRate = 0 and rotRate = rpm
+
 
 # Set initial conditions
-r0 = 1.0                               	# [5] initial radial position of ball. Choose a value between 0 and 1
-vr0 = 0.0                              	# [6] initial radial velocity of ball. Good values might be 0-1
-phi0 = np.pi/4                         	# [7] initial azimuthal position of ball. Choose a value between 0 and 2*pi
-vphi0 = 0.0                             # [8] initial azimuthal velocity of ball. Good values might be 0-1
+r0 = 1.0                               	# [6] initial radial position of ball. Choose a value between 0 and 1
+vr0 = 0.0                              	# [7] initial radial velocity of ball. Good values might be 0-1
+phi0 = np.pi/4                         	# [8] initial azimuthal position of ball. Choose a value between 0 and 2*pi
+vphi0 = 0.0                             # [9] initial azimuthal velocity of ball. Good values might be 0-1
 
 # Set the amplitude of oscillations to 40% of the smaller dimension
 amp = 0
@@ -63,6 +65,7 @@ def phi(t):
 
 numFrames = int(movLength * fps)	# calculate number of frames in movie
 phi0 *= -1				# correct angle-measuring convention
+dtheta = rotRate*(6/fps)                    # rotation of camera for each frame (in degrees)
 
 for i in range(numFrames):
     frame = np.zeros((height,width,3), np.uint8)
@@ -79,6 +82,9 @@ for i in range(numFrames):
     t = float(i)/fps
     currentPos = ((width/2)+int(amp*r(t)*np.cos(phi(t))), (height/2)+int(amp*r(t)*np.sin(phi(t))))
     cv2.circle(frame, currentPos, ballSize, (255,255,255), -1)
+    if rotRate != 0:
+        M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), i*dtheta, 1.0)
+        frame = cv2.warpAffine(frame, M, (width, height))
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
     video_writer.write(frame)
 
