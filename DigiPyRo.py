@@ -455,6 +455,8 @@ def start():
             frame = cv2.warpAffine(frame, M, (width, height))
             if totRPM == 0: # Case 2: the movie is de-rotated, we want to apply the mask after digital rotation so it is stationary
                 cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
+        else:
+            cv2.fillPoly(frame, np.array([poly1, poly2]), 0)
         
         # (3)
         frame = centerImg(frame, center[0], center[1]) # center the image
