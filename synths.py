@@ -13,6 +13,7 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import scipy as sp
 from scipy.optimize import leastsq
+spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png') # spinlab logo to display in upper right corner of output video
 
 # Ask user for movie name
 saveFile = raw_input('Enter a name for the movie (e.g. mySyntheticMovie): ')
@@ -23,6 +24,7 @@ movLength = 2				# [1] define the desired length of the movie in seconds
 fps = 30.0      			# [2] Set this to a low value (10-15) for increased speed or a higher value (30-60) for better results with DigiPyRo
 width = 1260				# [3] Width and height in pixels
 height = 720    			# [3] Decrease the width and height for increased speed, increase for improved resolution
+spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC) # resize spinlab logo based on input video dimensions
 
 # Define table values
 rpm = 10.0                            	# [4] frequency of oscillations (in RPM). Good values might be 5-15
@@ -63,6 +65,20 @@ def phi(t):
     x = ((1/omega)*(np.sin(omega*t))*(vr0*np.cos(phi0) - r0*vphi0*np.sin(phi0))) + r0*np.cos(phi0)*np.cos(omega*t)
     return np.arctan2(y,x)
 
+def annotate(img, i): # puts diagnostic text info on each frame
+    font = cv2.FONT_HERSHEY_TRIPLEX
+
+    dpro = 'SynthPy'
+    dproLoc = (25, 50)
+    cv2.putText(img, dpro, dproLoc, font, 1, (255, 105, 180), 1)
+
+    img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
+
+    timestamp = 'Time: ' + str(round((i/fps),1)) + ' s'
+    tLoc = (width - 225, height-25)
+    cv2.putText(img, timestamp, tLoc, font, 1, (255, 255, 255), 1)
+
+
 numFrames = int(movLength * fps)	# calculate number of frames in movie
 phi0 *= -1				# correct angle-measuring convention
 dtheta = rotRate*(6/fps)                    # rotation of camera for each frame (in degrees)
@@ -82,6 +98,7 @@ for i in range(numFrames):
     t = float(i)/fps
     currentPos = ((width/2)+int(amp*r(t)*np.cos(phi(t))), (height/2)+int(amp*r(t)*np.sin(phi(t))))
     cv2.circle(frame, currentPos, ballSize, (255,255,255), -1)
+    annotate(frame,i)
     if rotRate != 0:
         M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), i*dtheta, 1.0)
         frame = cv2.warpAffine(frame, M, (width, height))
