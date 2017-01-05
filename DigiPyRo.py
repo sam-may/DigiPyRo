@@ -6,24 +6,26 @@
 
 
 # Import necessary Python modules
-import cv2
 import numpy as np
 from Tkinter import *
 import matplotlib
-matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import scipy as sp
 from scipy.optimize import leastsq
 import time
 
+import cv2
+
+matplotlib.use("Agg")
 
 ########################
 ### Helper Functions ###
 ########################
 
-## Helper Functions: Section 1 -- User-Interaction Functions
-## The majority of functions in this section relate to user-identification of the region of interest (ROI) which will be digitally rotated,
-## or the intialization of single-particle tracking
+# Helper Functions: Section 1 -- User-Interaction Functions
+# The majority of functions in this section relate to user-identification 
+# of the region of interest (ROI) which will be digitally rotated,
+# or the intialization of single-particle tracking
 
 # Allows user to manually identify center of rotation
 def centerClick(event, x, y, flags, param):
@@ -33,7 +35,10 @@ def centerClick(event, x, y, flags, param):
         center = (x,y)				# set click location as center
         cv2.circle(frame, (x,y), 4, (255,0,0), -1) # draw circle at center
         cv2.imshow('CenterClick', frame)	# show updated image
-        frame = clone.copy() 			# resets to original image so that if the user reselects the center, the old circle will not appear
+        frame = clone.copy() 			# resets to original image so 
+                                                # that if the user reselects the
+                                                # center, the old circle will
+                                                # not appear
 
 # Shifts image so that it is centered at (x_c, y_c)
 def centerImg(img, x_c, y_c):
@@ -42,7 +47,8 @@ def centerImg(img, x_c, y_c):
     shiftMatrix = np.float32([[1, 0, dx], [0, 1, dy]])
     return cv2.warpAffine(img, shiftMatrix, (width, height))
 
-# User drags mouse and releases to indicate a conversion factor between pixels and units of distance
+# User drags mouse and releases to indicate a conversion factor between pixels 
+# and units of distance
 def unitConversion(event, x, y, flags, param):
     global frame, uStart, uEnd, unitCount, unitType, unitConv
     clone = frame.copy()
@@ -57,14 +63,15 @@ def unitConversion(event, x, y, flags, param):
         cv2.imshow('Distance Calibration', frame)
         frame = clone.copy()
 
-# User drags mouse and releases along a diameter of the particle to set an approximate size and location of particle for DPR to search for
+# User drags mouse and releases along a diameter of the particle to set an 
+# approximate size and location of particle for DPR to search for
 def locate(event, x, y, flags, param):
-    global frame, particleStart, particleEnd, particleCenter, particleRadius	# declare these variables as global so that they can be used by various functions without being passed explicitly
-    clone = frame.copy()							# save the original frame
-    if event == cv2.EVENT_LBUTTONDOWN:						# if user clicks
-        particleStart = (x,y)							# record location
-    elif event == cv2.EVENT_LBUTTONUP:						# if user releases click
-        particleEnd = (x,y)							# record location
+    global frame, particleStart, particleEnd, particleCenter, particleRadius	
+    clone = frame.copy()			# save the original frame
+    if event == cv2.EVENT_LBUTTONDOWN:		# if user clicks
+        particleStart = (x,y)			# record location
+    elif event == cv2.EVENT_LBUTTONUP:		# if user releases click
+        particleEnd = (x,y)			# record location
         particleCenter = ((particleEnd[0] + particleStart[0])/2, (particleEnd[1] + particleStart[1])/2)  # define the center as the midpoint between start and end points
         d2 = ((particleEnd[0] - particleStart[0])**2) + ((particleEnd[1] - particleStart[1])**2)
         particleRadius = (d2**(0.5))/2
