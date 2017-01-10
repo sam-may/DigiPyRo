@@ -24,8 +24,8 @@ def center_click(event, x, y, flags, param):
     global center, frame
     clone = frame.copy()                        # save the original frame
     if event == cv2.EVENT_LBUTTONDOWN:          # if user clicks 
-        center = (x,y)                          # set click location as center
-        cv2.circle(frame, (x,y), 4, (255,0,0), -1) # draw circle at center
+        center = (x, y)                          # set click location as center
+        cv2.circle(frame, (x, y), 4, (255, 0, 0), -1) # draw circle at center
         cv2.imshow('CenterClick', frame)        # show updated image
         frame = clone.copy()                    # resets to original image so 
                                                 # that if the user reselects 
@@ -45,13 +45,13 @@ def unit_conversion(event, x, y, flags, param):
     global frame, u_start, u_end, unit_count, unit_type, unit_conv
     clone = frame.copy()
     if event == cv2.EVENT_LBUTTONDOWN:
-        u_start = (x,y)
+        u_start = (x, y)
     elif event == cv2.EVENT_LBUTTONUP:
-        u_end = (x,y)
-        d2 = ((u_end[0] - u_start[0])**2) + ((u_end[1] - u_start[1])**2)
-        pixel_length = (d2**(0.5))/2
+        u_end = (x, y)
+        d_squared = ((u_end[0] - u_start[0])**2) + ((u_end[1] - u_start[1])**2)
+        pixel_length = (d_squared**(0.5))/2
         unit_conv = unit_count / pixel_length
-        cv2.line(frame, u_start, u_nd, (255,0,0), 1)
+        cv2.line(frame, u_start, u_nd, (255, 0, 0), 1)
         cv2.imshow('Distance Calibration', frame)
         frame = clone.copy()
 
@@ -61,7 +61,17 @@ def locate(event, x, y, flags, param):
     global frame, particle_start, particle_end, particle_center, particle_radius
     clone = frame.copy()               # save the original frame
     if event == cv2.EVENT_LBUTTONDOWN: # if user clicks
-        particle_start = (x,y)
+        particle_start = (x, y)
     elif event == cv2.EVENT_LBUTTONUP: # if user releases click
-        particle_end = (x,y)
-
+        particle_end = (x, y)
+        particle_center = ((particle_end[0] + particle_start[0])/2, 
+                           (particle_end[1] + particle_start[1])/2)  
+        # define the center as the midpoint between start and end points
+        d_squared = ((particle_end[0] - particle_start[0])**2) 
+        + ((particle_end[1] - particle_start[1])**2)
+        particle_radius = (d_squared**(0.5))/2
+        cv2.circle(frame, particle_center, int(particle_radius+0.5), (255, 0, 0), 1)
+        # draw circle that shows the radius and location of cirlces that the Hough 
+        # circle transform will search for
+        cv2.imshow('Locate Ball', frame) # show updated image
+        frame = clone.copy() # resets to original image
