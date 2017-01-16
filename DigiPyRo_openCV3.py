@@ -338,11 +338,11 @@ def start():
     global width, height, numFrames, fps, fourcc, video_writer, spinlab, npts # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
     npts = 0 # number of user-clicked points along circumference of circle/polygon
     spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png') # spinlab logo to display in upper right corner of output video
-    width = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)) 
-    height = int(vid.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)) # read the width and height of input video. output video will have matching dimensions
+    width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)) 
+    height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT)) # read the width and height of input video. output video will have matching dimensions
     fps = fpsVar.get()
     fileName = savefileVar.get()
-    fourcc = cv2.cv.CV_FOURCC('m','p','4','v') # codec for output video
+    fourcc = cv2.VideoWriter_fourcc('m','p','4','v') # codec for output video
     video_writer = cv2.VideoWriter(fileName+'.avi', fourcc, fps, (width, height)) # VideoWriter object for editing and saving the output video
 
     spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC) # resize spinlab logo based on input video dimensions
@@ -376,7 +376,7 @@ def start():
     global center, frame, xpoints, ypoints, r, poly1, poly2 # declare these variables as global so they can be used by helper functions without being explicitly passed as arguments
 
     # Open first frame from video, user will click on center
-    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # set the first frame to correspond to the user-selected start time
+    vid.set(cv2.CAP_PROP_POS_FRAMES, startFrame) # set the first frame to correspond to the user-selected start time
     ret, frame = vid.read() # read the first frame from the input video
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC) # ensure frame is correct dimensions
     cv2.namedWindow('CenterClick')
@@ -402,7 +402,7 @@ def start():
 
     # Select initial position of ball (only if particle tracking is selected)
     if trackBall:
-        vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+        vid.set(cv2.CAP_PROP_POS_FRAMES, startFrame)
         ret, frame = vid.read()
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
         cv2.namedWindow('Locate Ball')
@@ -415,7 +415,7 @@ def start():
 
     # Draw a line to calculate a pixel-to-distance conversion factor
     if changeUnits:
-        vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+        vid.set(cv2.CAP_PROP_POS_FRAMES, startFrame)
         ret, frame = vid.read()
         frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
         cv2.namedWindow('Distance Calibration')
@@ -426,7 +426,7 @@ def start():
         cv2.waitKey(0)
         cv2.destroyWindow('Distance Calibration')
 
-    vid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset video to first frame
+    vid.set(cv2.CAP_PROP_POS_FRAMES, startFrame) # reset video to first frame
 
     # allocate empty arrays for particle-tracking data
     t = np.empty(numFrames)
@@ -468,7 +468,7 @@ def start():
         if trackBall: # if tracking is turned on, apply tracking algorithm
             gray = cv2.cvtColor(centered, cv2.COLOR_BGR2GRAY) # convert to black and whitee
             gray = cv2.medianBlur(gray,5) # blur image. this allows for better identification of circles
-            ballLoc = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, 1, 20, param1=50, param2=10, minRadius = int(particleRadius * 0.6), maxRadius = int(particleRadius * 1.4))
+            ballLoc = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=10, minRadius = int(particleRadius * 0.6), maxRadius = int(particleRadius * 1.4))
             if type(ballLoc) != NoneType : # if a circle is identified, record it
                 for j in ballLoc[0,:]:
                     if (np.abs(j[0] - lastLoc[0]) < thresh) and (np.abs(j[1] - lastLoc[1]) < thresh):    
