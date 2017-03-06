@@ -1,3 +1,18 @@
+(* The following code can be copy-pasted into a Mathematica notebook, \
+allowing the user to create inertial circle videos AND to \
+interactively manipulate initial conditions and time. 
+
+What is shown in the "inertial frame" and "rotating frame" paths? \
+Consider a paraboloid formed by a 2d surface that rotates while under \
+the influence of gravity (gravity acts in the same direction as the \
+axis of rotation). The "inertial frame" shows the motion of a free \
+particle on this parabolic surface. The "rotating frame" shows the \
+motion of a free particle as viewed from a frame co-rotating with the \
+2d surface. That is, the rotating frame has the same angular \
+frequency as the angular frequency which formed the paraboloid. Jump \
+straight to the last line, remove the semicolon, and press \
+"Shift-Enter" to get a feel for things. *)
+
 Remove["Global`*"]
 \[Omega] = 1;
 \[CapitalOmega] = 1;
@@ -24,26 +39,41 @@ yi[t_, v\[Phi]0_] := r[t, v\[Phi]0] Sin[\[Theta][t, v\[Phi]0]];
 xr[t_, v\[Phi]0_] := r[t, v\[Phi]0] Cos[\[Theta]r[t, v\[Phi]0]];
 yr[t_, v\[Phi]0_] := r[t, v\[Phi]0] Sin[\[Theta]r[t, v\[Phi]0]];
 
+circleList = {Circle[{0, 0}, 0.5], Circle[{0, 0}, 1], 
+   Circle[{0, 0}, 1.5], Circle[{0, 0}, 2.0]};
+
 (* Remove the semicolon from the following line to create a movie \
 which shows one period of oscillation in the inertial frame (in blue) \
 and in the rotating frame (in red) *) 
 timeMov = 
   Animate[ParametricPlot[{{xi[t, v\[Phi]0], 
       yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0], yr[t, v\[Phi]0]}}, {t, 0, 
-     tf}, PlotRange -> {{-2, 2}, {-2, 2}}], {tf, -0.1, -2*Pi}];
+     tf}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+    PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+    PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+      Style[Framed["Rotating Frame"], 16, Red]}, 
+    Epilog -> {Dashed, Thickness[0.001], circleList}], {tf, -0.1, -2*
+     Pi}];
 
 (* Remove the semicolon from the following line to create a movie \
 which varies the initial azimuthal velocity *) 
 phiMov = Animate[
    ParametricPlot[{{xi[t, v\[Phi]0], 
       yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0], yr[t, v\[Phi]0]}}, {t, 
-     0, -2*Pi}, PlotRange -> {{-2, 2}, {-2, 2}}], {v\[Phi]0, 0, -2}];
+     0, -2*Pi}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+    PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+    PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+      Style[Framed["Rotating Frame"], 16, Red]}, 
+    Epilog -> {Dashed, Thickness[0.001], circleList}], {v\[Phi]0, 
+    0, -2}];
 
 (* Remove the semicolon from the following line to simultaneously \
 manipulate the initial azimuthal velocity AND the time *)
-
 Manipulate[
-  ParametricPlot[{{xi[t, v\[Phi]0], 
-     yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0], yr[t, v\[Phi]0]}}, {t, 0, 
-    th}, PlotRange -> {{-2, 2}, {-2, 2}}], {v\[Phi]0, -2, 
-   2}, {th, -0.01, -2*Pi}];
+ ParametricPlot[{{xi[t, v\[Phi]0], yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0],
+     yr[t, v\[Phi]0]}}, {t, 0, th}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+  PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+  PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+    Style[Framed["Rotating Frame"], 16, Red]}, 
+  Epilog -> {Dashed, Thickness[0.001], circleList}], {v\[Phi]0, -2, 
+  2}, {th, -0.01, -2*Pi}]
