@@ -1,17 +1,26 @@
 (* The following code can be copy-pasted into a Mathematica notebook, \
 allowing the user to create inertial circle videos AND to \
-interactively manipulate initial conditions and time. 
+interactively manipulate initial conditions and time. \
 
-What is shown in the "inertial frame" and "rotating frame" paths? \
+NOTE: This notebook was written in Mathematica 9
+
+To get a feel for the capabilities of the notebook, I recommend first \
+playing around a little. \
+(1) Execute the notebook by pressing SHIFT+ENTER.
+(2) Watch the particle's motion evolve in time by using the \
+slider labeled "time".
+(3) Watch the particle's motion change as a function of initial \
+azimuthal velocity by using the slider labeled "v\[Phi]0]".
+
+Now, what is shown in the "inertial frame" and "rotating frame" paths? \
 Consider a paraboloid formed by a 2d surface that rotates while under \
 the influence of gravity (gravity acts in the same direction as the \
 axis of rotation). The "inertial frame" shows the motion of a free \
 particle on this parabolic surface. The "rotating frame" shows the \
 motion of a free particle as viewed from a frame co-rotating with the \
 2d surface. That is, the rotating frame has the same angular \
-frequency as the angular frequency which formed the paraboloid. Jump \
-straight to the last line, remove the semicolon, and press \
-"Shift-Enter" to get a feel for things. *)
+frequency as the angular frequency which formed the paraboloid. *) \
+
 
 Remove["Global`*"]
 \[Omega] = 1;
@@ -71,9 +80,9 @@ phiMov = Animate[
 manipulate the initial azimuthal velocity AND the time *)
 Manipulate[
  ParametricPlot[{{xi[t, v\[Phi]0], yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0],
-     yr[t, v\[Phi]0]}}, {t, 0, th}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+     yr[t, v\[Phi]0]}}, {t, 0, time}, PlotRange -> {{-2, 2}, {-2, 2}}, 
   PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
   PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
     Style[Framed["Rotating Frame"], 16, Red]}, 
   Epilog -> {Dashed, Thickness[0.001], circleList}], {v\[Phi]0, -2, 
-  2}, {th, -0.01, -2*Pi}]
+  2}, {time, -0.01, -2*Pi}]
