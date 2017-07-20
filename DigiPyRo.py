@@ -654,6 +654,10 @@ camRPMEntry.grid(row=1, column=1)
 digiLabel.grid(row=2, column=0)
 camLabel.grid(row=1, column=0)
 
+sideBySideViewVar = BooleanVar()
+sideBySideViewEntry = Checkbutton(root, text="Display original video side-by-side with DigiPyRo-ed video", variable = sideBySideViewVar)
+sideBySideViewEntry.grid(row=2, column=2)
+
 customMaskVar = BooleanVar()
 customMaskEntry = Checkbutton(root, text="Custom-Shaped Mask (checking this box allows for a polygon-shaped mask. default is circular)", variable=customMaskVar)
 customMaskEntry.grid(row=3, column=0)
