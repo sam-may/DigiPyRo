@@ -627,6 +627,29 @@ def start():
             video_writer.write(frame)
     
     video_writer.release()
+    
+    sideBySideView = sideBySideViewVar.get()
+    if sideBySideView:
+        oldVid = cv2.VideoCapture(filename)		   # grab original video
+        newVid = cv2.VideoCapture(fileName+'.avi')	   # grab DigiPyRo-ed video
+        oldVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset original video to start frame
+        newVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
+        shrinkFactor = 0.4
+
+        video_writerSBS = cv2.VideoWriter(fileName+'SideBySide'+'.avi', fourcc, fps, (width, height)) # create output video for Side by Side view
+        framesArraySBS = np.empty((numFrames,height,width,3), np.uint8) # frames array for new video
+        for i in range(numFrames):
+            # Grab frames from original and DigiPyRo-ed movie, resize them and then put them side by side
+            ret1, frame1 = oldVid.read()
+            ret2, frame2 = newVid.read()
+            frame1 = cv2.resize(frame1,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
+            frame2 = cv2.resize(frame2,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
+            outFrame = np.zeros((height,width,3), np.uint8)
+            outFrame[0:int(height*shrinkFactor), 0:int(width*shrinkFactor)] = frame1
+            outFrame[0:int(height*shrinkFactor),  int(width/2):int(width/2)+int(width*shrinkFactor)] = frame2
+            video_writerSBS.write(outFrame)
+        video_writerSBS.release()
+
 
 #######################
 ### Create GUI menu ###
