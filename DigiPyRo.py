@@ -636,17 +636,29 @@ def start():
         newVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
         shrinkFactor = 0.4
 
-        video_writerSBS = cv2.VideoWriter(fileName+'SideBySide'+'.avi', fourcc, fps, (width, height)) # create output video for Side by Side view
-        framesArraySBS = np.empty((numFrames,height,width,3), np.uint8) # frames array for new video
+        onTop = width > height # bool that tells us if the videos will be stacked on top of each other or side by side
+        if onTop:
+            newWidth = width
+            newHeight = 2*height
+        else:
+            newWidth = 2*width
+            newHeight = height
+        video_writerSBS = cv2.VideoWriter(fileName+'SideBySide'+'.avi', fourcc, fps, (newWidth, newHeight))
         for i in range(numFrames):
             # Grab frames from original and DigiPyRo-ed movie, resize them and then put them side by side
             ret1, frame1 = oldVid.read()
             ret2, frame2 = newVid.read()
-            frame1 = cv2.resize(frame1,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
-            frame2 = cv2.resize(frame2,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
-            outFrame = np.zeros((height,width,3), np.uint8)
-            outFrame[0:int(height*shrinkFactor), 0:int(width*shrinkFactor)] = frame1
-            outFrame[0:int(height*shrinkFactor),  int(width/2):int(width/2)+int(width*shrinkFactor)] = frame2
+            #frame1 = cv2.resize(frame1,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
+            #frame2 = cv2.resize(frame2,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
+            outFrame = np.zeros((newHeight,newWidth,3), np.uint8)
+            if onTop:
+                outFrame[0:height,0:width] = frame1
+                outFrame[height:newHeight,0:width] = frame2
+            else:
+                outFrame[0:height,0:width] = frame1
+                outFrame[0:height,width:newWidth] = frame2
+            #outFrame[0:int(height*shrinkFactor), 0:int(width*shrinkFactor)] = frame1
+            #outFrame[0:int(height*shrinkFactor),  int(width/2):int(width/2)+int(width*shrinkFactor)] = frame2
             video_writerSBS.write(outFrame)
         video_writerSBS.release()
 
