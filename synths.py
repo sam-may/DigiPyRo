@@ -98,10 +98,10 @@ for i in range(numFrames):
     t = float(i)/fps
     currentPos = ((width/2)+int(amp*r(t)*np.cos(phi(t))), (height/2)+int(amp*r(t)*np.sin(phi(t))))
     cv2.circle(frame, currentPos, ballSize, (255,255,255), -1)
-    annotate(frame,i)
     if rotRate != 0:
         M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), i*dtheta, 1.0)
         frame = cv2.warpAffine(frame, M, (width, height))
+    annotate(frame,i)
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
     video_writer.write(frame)
 
