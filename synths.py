@@ -17,6 +17,13 @@ spinlab = cv2.imread('SpinLabUCLA_BW_strokes.png') # spinlab logo to display in 
 
 # Ask user for movie name
 saveFile = raw_input('Enter a name for the movie (e.g. mySyntheticMovie): ')
+
+# Ask user if they would like a parabolic side view
+parView = raw_input('Would you also like a side view? (yes/no): ')
+doParView = 'yes' in parView
+
+if doParView:
+    saveFilePar = saveFile + 'side.avi'
 saveFile += '.avi'
 
 # Define movie details
@@ -53,6 +60,8 @@ omega = (rpm * 2 * np.pi)/60		# calculate angular frequency of oscillations
 # Create movie file
 fourcc = cv2.cv.CV_FOURCC('m','p','4','v')
 video_writer = cv2.VideoWriter(saveFile, fourcc, fps, (width, height))
+if doParView:
+    video_writer_par = cv2.VideoWriter(saveFilePar, fourcc, fps, (width, height))
 
 def r(t):
     t1 = (((vr0**2)+((r0**2)*(vphi0**2)))*(np.sin(omega*t)**2))/(omega**2)
@@ -77,6 +86,20 @@ def annotate(img, i): # puts diagnostic text info on each frame
     timestamp = 'Time: ' + str(round((i/fps),1)) + ' s'
     tLoc = (width - 225, height-25)
     cv2.putText(img, timestamp, tLoc, font, 1, (255, 255, 255), 1)
+
+def parabolaPoints():
+    xpoints = np.empty(width)
+    ypoints = np.empty(width)
+    for i in range(width):
+        xpoints[i] = i
+        ypoints[i] = int( (height/4) + ((rpm**2)*((i/amp)**2))/(2*9.8))
+        nextPoint = np.array([xpoints[i], ypoints[i]])
+        try:
+            ppoints
+        except:
+            ppoints = nextPoint
+        else:
+            ppoints = np.append(ppoints, nextPoint, axis=0)
 
 
 numFrames = int(movLength * fps)	# calculate number of frames in movie
@@ -105,4 +128,11 @@ for i in range(numFrames):
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
     video_writer.write(frame)
 
+    if doParView:
+        framePar = np.zeros((height,width,3), np.uint8)
+        parPoints = parabolaPoints()
+        cv2.polylines(framePar, parPoints, 0, (255,255,255), 2)
+        video_writer_par.write(framePar)
+
 video_writer.release()
+video_writer_par.release()

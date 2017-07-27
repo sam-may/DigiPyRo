@@ -215,6 +215,21 @@ def annotateImg(img, i):
     cv2.putText(img, drpm, dLoc, font, 1, (255, 255, 255), 1)
     cv2.putText(img, crpm, cLoc, font, 1, (255, 255, 255), 1)
 
+def annotateSBS(img):
+    font = cv2.FONT_HERSHEY_TRIPLEX
+    
+    orig = 'Raw Movie'
+    origLoc = (int(0.4*width), 50)
+
+    dpred = 'DigiPyRo: '
+    if (digiRPM > 0):
+        dpred += '+'
+    dpred += str(digiRPM) + 'RPM'
+    dpredLoc = (int(1.3*width), 50)
+
+    cv2.putText(img, orig, origLoc, font, 2, (255, 255, 255), 1)
+    cv2.putText(img, dpred, dpredLoc, font, 2, (255, 255, 255), 1)
+
 # Displays instructions on the screen for identifying the circle/polygon of interest
 def instructsCenter(img):
     font = cv2.FONT_HERSHEY_PLAIN
@@ -634,29 +649,24 @@ def start():
         newVid = cv2.VideoCapture(fileName+'.avi')	   # grab DigiPyRo-ed video
         oldVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset original video to start frame
         newVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
-        shrinkFactor = 0.4
 
-        onTop = width > height # bool that tells us if the videos will be stacked on top of each other or side by side
-        if onTop:
-            newWidth = width
-            newHeight = 2*height
-        else:
-            newWidth = 2*width
-            newHeight = height
+        borderWidth = 10
+        borderHeight = 100
+        newWidth = 2*width + borderWidth
+        newHeight = height + 2*borderHeight
         video_writerSBS = cv2.VideoWriter(fileName+'SideBySide'+'.avi', fourcc, fps, (newWidth, newHeight))
         for i in range(numFrames):
             # Grab frames from original and DigiPyRo-ed movie, resize them and then put them side by side
             ret1, frame1 = oldVid.read()
             ret2, frame2 = newVid.read()
-            #frame1 = cv2.resize(frame1,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
-            #frame2 = cv2.resize(frame2,(int(width*shrinkFactor),int(height*shrinkFactor)), interpolation = cv2.INTER_CUBIC)
+            cv2.fillPoly(frame1, np.array([poly1,poly2]),0) # apply mask to original movie
+            frame1 = centerImg(frame1, center[0], center[1]) # center original movie about rotation point
+
             outFrame = np.zeros((newHeight,newWidth,3), np.uint8)
-            if onTop:
-                outFrame[0:height,0:width] = frame1
-                outFrame[height:newHeight,0:width] = frame2
-            else:
-                outFrame[0:height,0:width] = frame1
-                outFrame[0:height,width:newWidth] = frame2
+            outFrame[borderHeight:newHeight-borderHeight,0:width] = frame1
+            outFrame[borderHeight:newHeight-borderHeight,width+borderWidth:newWidth] = frame2
+            annotateSBS(outFrame)
+ 
             #outFrame[0:int(height*shrinkFactor), 0:int(width*shrinkFactor)] = frame1
             #outFrame[0:int(height*shrinkFactor),  int(width/2):int(width/2)+int(width*shrinkFactor)] = frame2
             video_writerSBS.write(outFrame)
