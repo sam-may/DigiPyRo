@@ -92,7 +92,7 @@ def parabolaPoints():
     ypoints = np.empty(width)
     for i in range(width):
         xpoints[i] = i
-        ypoints[i] = int( (height/4) + ((rpm**2)*((i/amp)**2))/(2*9.8))
+        ypoints[i] = int( ((0.75)*float(height)) - ((rpm**2)*((float(i-(width/2))/float(amp))**2))/(2*9.8))
         nextPoint = np.array([xpoints[i], ypoints[i]])
         try:
             ppoints
@@ -100,12 +100,15 @@ def parabolaPoints():
             ppoints = nextPoint
         else:
             ppoints = np.append(ppoints, nextPoint, axis=0)
+    return ppoints
 
 
 numFrames = int(movLength * fps)	# calculate number of frames in movie
 phi0 *= -1				# correct angle-measuring convention
 dtheta = rotRate*(6/fps)                    # rotation of camera for each frame (in degrees)
 
+parPoints = np.int32(parabolaPoints()) # cv2 only accepts int32 arrays for polypoints :-|
+parPoints = parPoints.reshape((-1,1,2))
 for i in range(numFrames):
     frame = np.zeros((height,width,3), np.uint8)
 
@@ -130,8 +133,9 @@ for i in range(numFrames):
 
     if doParView:
         framePar = np.zeros((height,width,3), np.uint8)
-        parPoints = parabolaPoints()
-        cv2.polylines(framePar, parPoints, 0, (255,255,255), 2)
+        cv2.polylines(framePar, [parPoints], 0, (255,255,255), 2)
+        currentPos = ((width/2) + int(amp*r(t)*np.cos(phi(t))), parPoints[i,0,1])
+        cv2.circle(framePar, currentPos, ballSize, (255,255,255), -1)
         video_writer_par.write(framePar)
 
 video_writer.release()
