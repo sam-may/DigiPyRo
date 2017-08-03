@@ -219,16 +219,18 @@ def annotateSBS(img):
     font = cv2.FONT_HERSHEY_TRIPLEX
     
     orig = 'Raw Movie'
-    origLoc = (int(0.4*width), 50)
+    origLoc = (int(0.01*r), 50)
 
     dpred = 'DigiPyRo: '
     if (digiRPM > 0):
         dpred += '+'
     dpred += str(digiRPM) + 'RPM'
-    dpredLoc = (int(1.3*width), 50)
+    dpredLoc = (int(2.01*r)+30, 50)
 
     cv2.putText(img, orig, origLoc, font, 2, (255, 255, 255), 1)
     cv2.putText(img, dpred, dpredLoc, font, 2, (255, 255, 255), 1)
+
+    img[img.shape[0] - (spinlab.shape[0] + 25): img.shape[0] - 25, img.shape[1] - (spinlab.shape[1] + 25): img.shape[1] - 25] = spinlab
 
 # Displays instructions on the screen for identifying the circle/polygon of interest
 def instructsCenter(img):
@@ -650,10 +652,29 @@ def start():
         oldVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame) # reset original video to start frame
         newVid.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, startFrame)
 
-        borderWidth = 10
+        borderWidth = 30
         borderHeight = 100
-        newWidth = 2*width + borderWidth
-        newHeight = height + 2*borderHeight
+        newWidth = int(4*r) + borderWidth
+        newHeight = int(2*r) + 2*borderHeight
+
+        oldHeight1 = (int((height/2)+r))
+        oldHeight2 = (int((height/2)-r))
+        oldWidth1 = (int((width/2)+r))
+        oldWidth2 = (int((width/2)-r))
+        if oldHeight1 > height:
+	    oldHeight1 = height
+        if oldWidth1 > width:
+	    oldWidth1 = width
+        if oldHeight2 < 0:
+	    oldHeight2 = 0
+        if oldWidth2 < 0:
+	    oldWidth2 = 0
+
+        if ((oldHeight1-oldHeight2) - (2*borderHeight)) < height:
+            newHeight = (oldHeight1-oldHeight2) + 2*borderHeight
+        if ((oldWidth1-oldWidth2) - (2*borderWidth)) < width:
+            newWidth = 2*(oldWidth1-oldWidth2) + borderWidth
+
         video_writerSBS = cv2.VideoWriter(fileName+'SideBySide'+'.avi', fourcc, fps, (newWidth, newHeight))
         for i in range(numFrames):
             # Grab frames from original and DigiPyRo-ed movie, resize them and then put them side by side
@@ -663,8 +684,8 @@ def start():
             frame1 = centerImg(frame1, center[0], center[1]) # center original movie about rotation point
 
             outFrame = np.zeros((newHeight,newWidth,3), np.uint8)
-            outFrame[borderHeight:newHeight-borderHeight,0:width] = frame1
-            outFrame[borderHeight:newHeight-borderHeight,width+borderWidth:newWidth] = frame2
+            outFrame[borderHeight:newHeight-borderHeight,0:(oldWidth1-oldWidth2)] = frame1[oldHeight2:oldHeight1, oldWidth2:oldWidth1]
+            outFrame[borderHeight:newHeight-borderHeight,int(2*r)+borderWidth:newWidth] = frame2[oldHeight2:oldHeight1, oldWidth2:oldWidth1]
             annotateSBS(outFrame)
  
             #outFrame[0:int(height*shrinkFactor), 0:int(width*shrinkFactor)] = frame1
