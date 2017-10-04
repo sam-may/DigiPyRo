@@ -27,7 +27,7 @@ spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation
 rpm = 10.0                              # [4] frequency of oscillations (in RPM). Good values might be 5-15
                                         # NOTE: A two-dimensional rotating system naturally takes the shape of a parabola.
                                         # The rotation rate determines the curvature of the parabola, which is why we define the curvature in terms of RPM
-rotRate = 10.0                          # [5] rotation rate of camera. The two natural frames of reference are with rotRate = 0 and rotRate = rpm
+rotRate = 0.0                          # [5] rotation rate of camera. The two natural frames of reference are with rotRate = 0 and rotRate = rpm
 
 
 # Set initial conditions
@@ -57,11 +57,15 @@ if doParView:
 else:
     fullHeight = height
 
+
+# No longer asking user if they care about reference frame of parabolic side view
+doParViewRot = (rotRate != 0)
+
 # Ask user if they care about reference frame of parabolic side view
-doParViewRot = False
-if doParView and rotRate!=0:
-    parViewRot = raw_input('Would you like the parabolic side view in the rotating frame? (yes/no): ')
-    doParViewRot = 'yes' in parViewRot
+#doParViewRot = False
+#if doParView and rotRate!=0:
+#    parViewRot = raw_input('Would you like the parabolic side view in the rotating frame? (yes/no): ')
+#    doParViewRot = 'yes' in parViewRot
 
 # Set the amplitude of oscillations to 40% of the smaller dimension
 amp = 0
@@ -289,10 +293,13 @@ for i in range(numFrames):
     cv2.circle(frame, currentPos, ballSize, (255,255,255), -1)
     if rotRate != 0:
         M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), i*dtheta, 1.0)
+        dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
         frame = cv2.warpAffine(frame, M, (width, height))
     annotate(frame,i)
-    dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 55, 255, 90, 2, 10) # for rotating
-    #dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
+    if rotRate != 0:
+        dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 55, 255, 90, 2, 10) # for rotating
+    else:
+        dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
    #cv2.line(frame, (int(width/2)-int(amp), int(height/2)), (int(width/2)+int(amp), int(height/2)), (255, 105, 180), 2)
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
     if not doParView:
@@ -302,8 +309,10 @@ for i in range(numFrames):
 
         # Create parView pad
         framePar = np.zeros((fullHeight-(height+borderHeight),width,3), np.uint8)
-        #cv2.polylines(framePar, [parPoints], 0, (255, 105, 180), 2)
-        cv2.polylines(framePar, [parPoints], 0, (55, 255, 90), 2)
+        if rotRate != 0:
+            cv2.polylines(framePar, [parPoints], 0, (55, 255, 90), 2)
+        else:
+            cv2.polylines(framePar, [parPoints], 0, (255, 105, 180), 2)
 
         dottedLine(framePar, width/2-int(amp), 30, width/2-int(amp), framePar.shape[0], 255, 255, 255, 2, 10)
         dottedLine(framePar, width/2+int(amp), 30, width/2+int(amp), framePar.shape[0], 255, 255, 255, 2, 10)
