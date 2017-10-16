@@ -1,0 +1,95 @@
+(* The following code can be copy-pasted into a Mathematica notebook, \
+allowing the user to create inertial circle videos AND to \
+interactively manipulate initial conditions and time. \
+
+NOTE: This notebook was written in Mathematica 9
+
+To get a feel for the capabilities of the notebook, I recommend first \
+playing around a little. \
+(1) Execute the notebook by pressing SHIFT+ENTER.
+(2) Watch the particle's motion evolve in time by using the \
+slider labeled "time".
+(3) Watch the particle's motion change as a function of initial \
+azimuthal velocity by using the slider labeled "v\[Phi]0]".
+
+Now, what is shown in the "inertial frame" and "rotating frame" paths? \
+Consider a paraboloid formed by a 2d surface that rotates while under \
+the influence of gravity (gravity acts in the same direction as the \
+axis of rotation). The "inertial frame" shows the motion of a free \
+particle on this parabolic surface. The "rotating frame" shows the \
+motion of a free particle as viewed from a frame co-rotating with the \
+2d surface. That is, the rotating frame has the same angular \
+frequency as the angular frequency which formed the paraboloid. *) \
+
+
+Remove["Global`*"]
+\[CapitalOmega] = 1;          (* angular velocity of paraboloid *) 
+vr0 = 0;                      (* initial radial velocity *)
+r0 = 1;                       (* initial radial position *)
+v\[Phi]0 = -1.3;              (* initial azimuthal velocity *)
+\[Phi]0 = Pi/4;               (* initial azimuthal position *)
+
+
+(* Equations of motion of a particle moving on a parabolic surface \
+(making the approximation that gravity is much greater than the rotation rate -- \
+that is, g >> \[CapitalOmega]^2 *)
+r[t_, v\[Phi]0_] := ((((vr0^2 + 
+          r0^2 v\[Phi]0^2) (Sin[\[CapitalOmega] \
+t])^2)/\[CapitalOmega]^2) + ((r0 vr0 Sin[
+         2 \[CapitalOmega] t])/\[CapitalOmega]) + (r0^2 (Cos[\
+\[CapitalOmega] t])^2))^(1/2);
+\[Theta][t_, v\[Phi]0_] := 
+  ArcTan[(((Sin[\[CapitalOmega] t]) (vr0 Cos[\[Phi]0] - 
+          r0 v\[Phi]0 Sin[\[Phi]0]))/\[CapitalOmega]) + 
+    r0 Cos[\[Phi]0] Cos[\[CapitalOmega] t], (((Sin[\[CapitalOmega] \
+t]) (vr0 Sin[\[Phi]0] + r0 v\[Phi]0 Cos[\[Phi]0]))/\[CapitalOmega]) + 
+    r0 Sin[\[Phi]0] Cos[\[CapitalOmega] t]];
+    
+(* Azimuthal coordinate when transformed to a rotating frame *)    
+\[Theta]r[t_, 
+   v\[Phi]0_] := \[Theta][t, v\[Phi]0] + \[CapitalOmega] t;
+   
+(* Convert equations of motion from polar coordinates to cartesian coordinates *)
+xi[t_, v\[Phi]0_] := r[t, v\[Phi]0] Cos[\[Theta][t, v\[Phi]0]];
+yi[t_, v\[Phi]0_] := r[t, v\[Phi]0] Sin[\[Theta][t, v\[Phi]0]];
+xr[t_, v\[Phi]0_] := r[t, v\[Phi]0] Cos[\[Theta]r[t, v\[Phi]0]];
+yr[t_, v\[Phi]0_] := r[t, v\[Phi]0] Sin[\[Theta]r[t, v\[Phi]0]];
+
+circleList = {Circle[{0, 0}, 0.5], Circle[{0, 0}, 1], 
+   Circle[{0, 0}, 1.5], Circle[{0, 0}, 2.0]};
+
+(* Remove the semicolon from the following line to create a movie \
+which shows one period of oscillation in the inertial frame (in blue) \
+and in the rotating frame (in red) *) 
+timeMov = 
+  Animate[ParametricPlot[{{xi[t, v\[Phi]0], 
+      yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0], yr[t, v\[Phi]0]}}, {t, 0, 
+     tf}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+    PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+    PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+      Style[Framed["Rotating Frame"], 16, Red]}, 
+    Epilog -> {Dashed, Thickness[0.001], circleList}], {tf, -0.1, -2*
+     Pi}];
+
+(* Remove the semicolon from the following line to create a movie \
+which varies the initial azimuthal velocity *) 
+phiMov = Animate[
+   ParametricPlot[{{xi[t, v\[Phi]0], 
+      yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0], yr[t, v\[Phi]0]}}, {t, 
+     0, -2*Pi}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+    PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+    PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+      Style[Framed["Rotating Frame"], 16, Red]}, 
+    Epilog -> {Dashed, Thickness[0.001], circleList}], {v\[Phi]0, 
+    0, -2}];
+
+(* Remove the semicolon from the following line to simultaneously \
+manipulate the initial azimuthal velocity AND the time *)
+Manipulate[
+ ParametricPlot[{{xi[t, v\[Phi]0], yi[t, v\[Phi]0]}, {xr[t, v\[Phi]0],
+     yr[t, v\[Phi]0]}}, {t, 0, time}, PlotRange -> {{-2, 2}, {-2, 2}}, 
+  PlotStyle -> {{Blue, Thickness[0.01]}, {Red, Thickness[0.01]}}, 
+  PlotLabel -> {Style[Framed["Inertial Frame"], 16, Blue], 
+    Style[Framed["Rotating Frame"], 16, Red]}, 
+  Epilog -> {Dashed, Thickness[0.001], circleList}], {v\[Phi]0, -2, 
+  2}, {time, -0.01, -2*Pi}]
