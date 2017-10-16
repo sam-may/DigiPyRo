@@ -95,16 +95,25 @@ def phi(t):
     x = ((1/omega)*(np.sin(omega*t))*(vr0*np.cos(phi0) - r0*vphi0*np.sin(phi0))) + r0*np.cos(phi0)*np.cos(omega*t)
     return np.arctan2(y,x)
 
-def annotate(img, i): # puts diagnostic text info on each frame
+def annotate(img, i, rotatingView): # puts diagnostic text info on each frame
     font = cv2.FONT_HERSHEY_TRIPLEX
 
     dpro = 'SynthPy'
     dproLoc = (25, 50)
-    cv2.putText(img, dpro, dproLoc, font, 1, (255, 105, 180), 1)
+    cv2.putText(img, dpro, dproLoc, font, 1, (255,255,255), 1)
 
     topView = 'Top View'
     topViewLoc = (25, 90)
-    cv2.putText(img, topView, topViewLoc, font, 1, (255, 105, 180), 1)
+    cv2.putText(img, topView, topViewLoc, font, 1, (255,255,255), 1)
+
+    if rotatingView:
+        rotView = 'Rotating View'
+        rotViewLoc = (25, 130)
+        cv2.putText(img, rotView, rotViewLoc, font, 1, (55, 255, 90), 1)
+    else:
+        rotView = 'Inertial View'
+        rotViewLoc = (25, 130)
+        cv2.putText(img, rotView, rotViewLoc, font, 1, (255, 105, 180), 1)
 
     img[25:25+spinlab.shape[0], (width-25)-spinlab.shape[1]:width-25] = spinlab
 
@@ -229,21 +238,31 @@ def dottedLine(frame, xi, yi, xf, yf, c1, c2, c3, thickness, segmentLength):
         except:
             continue
 
+def rotatedDottedLine(theta, frame, xi, yi, xf, yf, c1, c2, c3, thickness, segmentLength):
+    centerX = int((xf+xi)/2)
+    centerY = int((yf+yi)/2)
+    lineRadius = int((((xf-xi)**2 + (yf-yi)**2)**(0.5))/2)
+    nXi = int(-lineRadius*np.cos(theta)) + centerX
+    nXf = int(lineRadius*np.cos(theta)) + centerX
+    nYi = int(lineRadius*np.sin(-theta)) + centerY
+    nYf = int(lineRadius*np.sin(theta)) + centerY
+    dottedLine(frame, nXi, nYi, nXf, nYf, c1, c2, c3, thickness, segmentLength)
+
 def annotateSideview(img):
     font = cv2.FONT_HERSHEY_TRIPLEX
 
     dpro = 'Side-View'
     dproLoc = (25, height+borderHeight+25)
-    cv2.putText(img, dpro, dproLoc, font, 1, (255, 105, 180), 1)
+    cv2.putText(img, dpro, dproLoc, font, 1, (255,255,255), 1)
 
     surf = str(rpm) + ' RPM Parabolic Surface'
     surfLoc = (width-500, height+borderHeight+25)
-    cv2.putText(img, surf, surfLoc, font, 1, (255, 105, 180), 1)
+    cv2.putText(img, surf, surfLoc, font, 1, (255,255,255), 1)
 
     maxDef = ((omega**2))/(2*9.8)
     defl = 'Max. Deflection: h = '+ str(round(maxDef,1)) + ' m'
     deflLoc = (width-500, height+borderHeight+65)
-    cv2.putText(img, defl, deflLoc, font, 1, (255, 105, 180), 1)
+    cv2.putText(img, defl, deflLoc, font, 1, (255,255,255), 1)
 
 #def parHeight(x, phi0):
     
@@ -287,18 +306,24 @@ for i in range(numFrames):
     cv2.line(frame, (width/2+ls, height/2), (width/2-ls, height/2), (255,255,255), 1)
     cv2.line(frame, (width/2, height/2+ls), (width/2, height/2-ls), (255,255,255), 1)
 
+    dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for rotating
+    if rotRate != 0:
+        M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), -i*dtheta*2, 1.0)
+        frame = cv2.warpAffine(frame, M, (width, height))
+
     # Calculate new position of ball and draw it
     t = float(i)/fps
     currentPos = ((width/2)+int(amp*r(t)*np.cos(phi(t))), (height/2)+int(amp*r(t)*np.sin(phi(t))))
     cv2.circle(frame, currentPos, ballSize, (255,255,255), -1)
     if rotRate != 0:
         M = cv2.getRotationMatrix2D((int(width/2), int(height/2)), i*dtheta, 1.0)
-        dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
+        #dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
         frame = cv2.warpAffine(frame, M, (width, height))
-    annotate(frame,i)
-    if rotRate != 0:
-        dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 55, 255, 90, 2, 10) # for rotating
-    else:
+        #rotatedDottedLine(-i*dtheta, frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
+    annotate(frame,i, rotRate != 0)
+    #if rotRate != 0:
+        #dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 55, 255, 90, 2, 10) # for rotating
+    if rotRate == 0:
         dottedLine(frame, int(width/2)-int(amp), int(height/2), int(width/2)+int(amp), int(height/2), 255, 105, 180, 2, 10) # for inertial
    #cv2.line(frame, (int(width/2)-int(amp), int(height/2)), (int(width/2)+int(amp), int(height/2)), (255, 105, 180), 2)
     frame = cv2.resize(frame,(width,height), interpolation = cv2.INTER_CUBIC)
