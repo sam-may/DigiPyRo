@@ -614,9 +614,10 @@ def start():
     vid.release()		# release the video
 
     # Loop through video and report inertial radius 
-    numRadii = 25 			# number of inertial radii which will be shown at one time on the screen
-    rInertSmooth[0:3] = 0
-    rInertSmooth[ballPts-3:ballPts] = 0 # the first and last few inertial radii tend to have very large systematic errors. Set them to 0 so that they are not shown
+    numRadii = 25
+    if trackBall:
+        rInertSmooth[0:3] = 0
+        rInertSmooth[ballPts-3:ballPts] = 0 # the first and last few inertial radii tend to have very large systematic errors. Set them to 0 so that they are not shown
     if trackBall and totRPM != 0:	# only do this if particle tracking is selected and the inertial radius is not infinite (happens when totRPM = 0)
         index=0
         lineStartX = np.empty(ballPts, dtype=np.int16)
@@ -680,6 +681,8 @@ def start():
             # Grab frames from original and DigiPyRo-ed movie, resize them and then put them side by side
             ret1, frame1 = oldVid.read()
             ret2, frame2 = newVid.read()
+            if frame1 is None or frame2 is None:
+                continue
             cv2.fillPoly(frame1, np.array([poly1,poly2]),0) # apply mask to original movie
             frame1 = centerImg(frame1, center[0], center[1]) # center original movie about rotation point
 
