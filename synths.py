@@ -21,7 +21,8 @@ movLength = 5                           # [1] define the desired length of the m
 fps = 30.0                              # [2] Set this to a low value (10-15) for increased speed or a higher value (30-60) for better results with DigiPyRo
 width = 1260                            # [3] Width and height in pixels
 height = 720                            # [3] Decrease the width and height for increased speed, increase for improved resolution
-spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC) # resize spinlab logo based on input video dimensions
+spinlab = cv2.resize(spinlab,(int(0.2*width),int((0.2*height)/3)), interpolation = cv2.INTER_CUBIC)
+
 
 # Define table values
 rpm = 10.0                              # [4] frequency of oscillations (in RPM). Good values might be 5-15
