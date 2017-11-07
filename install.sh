@@ -2,7 +2,7 @@
 xcode-select --install
 
 # Install homebrew
-cd ~
+pushd ~
 which -s brew
 if [[ $? != 0 ]] ; then
     # Install Homebrew
@@ -16,6 +16,14 @@ which -s python
 if [[ $? != 0 ]] ; then
     # Install python
     brew install python
+fi
+
+pythonLocation=$(which python)
+pythonDesiredLocation="/usr/local/bin/python"
+if [ "$pythonLocation" != "$pythonDesiredLocation" ] ; then
+    echo "OpenCV needs your default Python to be located in /usr/local/bin/python"
+    echo "In other words, the command `which python` needs to output /usr/local/bin/python"
+    exit 1
 fi
 
 # Get openCV
@@ -45,6 +53,7 @@ ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
 
 # Download DigiPyRo
+popd
 if [ ! -d "DigiPyRo" ] ; then
     git clone https://github.com/sam-may/DigiPyRo
     git checkout master
