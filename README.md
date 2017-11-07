@@ -14,3 +14,4 @@ import cv2
 ```
 2. Create a synthetic movie: `python synths.py`
 3. Digitally rotate a movie: `python DigiPyRo.py`
+4. For more in-depth instructions, see `Examples/BasicExamples_v3.pdf`.
