@@ -17,8 +17,14 @@ if [[ $? != 0 ]] ; then
     # Install python
     brew install python
 fi
-pip install numpy --upgrade
 
+# Upgrade python packages
+# FIXME: Do I need to check if user has pip installed? Is pip installed by default with any version of python?
+pip install numpy --upgrade
+pip install scipy --upgrade
+pip install matplotlib --upgrade
+
+# Make sure that the user's python is /usr/local/bin/python
 pythonLocation=$(which python)
 pythonDesiredLocation="/usr/local/bin/python"
 if [ "$pythonLocation" != "$pythonDesiredLocation" ] ; then
@@ -32,6 +38,7 @@ brew tap homebrew/science
 brew install opencv@2
 brew install pkg-config
 
+# Next two are bc opencv@2 is a "keg-only" package (i.e. not the most recent version)
 echo 'export PATH="/usr/local/opt/opencv@2/bin:$PATH"' >> ~/.bash_profile
 export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:$PKG_CONFIG_PATH"
 
@@ -43,6 +50,7 @@ if [ ! -f .bash_profile ] ; then
 fi
 
 cat ~/.bash_profile | grep PYTHONPATH
+
 if [ -f cv.py ] ; then
     rm cv.py
 fi
@@ -51,6 +59,7 @@ if [ -f cv2.so ] ; then
     rm cv2.so
 fi
 
+# Symlinks for opencv to find python
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.py cv.py
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
 
