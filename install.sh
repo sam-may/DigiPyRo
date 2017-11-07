@@ -54,7 +54,6 @@ ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv
 ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
 
 source ~/.bash_profile
-echo "Your default python is located in `which python`"
 
 # Download DigiPyRo
 popd
