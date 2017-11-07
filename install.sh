@@ -28,9 +28,10 @@ pip install matplotlib --upgrade
 pythonLocation=$(which python)
 pythonDesiredLocation="/usr/local/bin/python"
 if [ "$pythonLocation" != "$pythonDesiredLocation" ] ; then
-    echo "OpenCV needs your default Python to be located in /usr/local/bin/python"
-    echo "In other words, the command `which python` needs to output /usr/local/bin/python"
-    exit 1
+    echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bash_profile
+    #echo "OpenCV needs your default Python to be located in /usr/local/bin/python"
+    #echo "In other words, the command `which python` needs to output /usr/local/bin/python"
+    #exit 1
 fi
 
 # Get openCV
@@ -45,10 +46,6 @@ export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:$PKG_CONFIG_PATH"
 # Grab openCV version
 opencvVersion=$(pkg-config --modversion opencv)
 
-if [ ! -f .bash_profile ] ; then
-    touch .bash_profile
-fi
-
 cat ~/.bash_profile | grep PYTHONPATH
 
 if [ -f cv.py ] ; then
@@ -62,6 +59,9 @@ fi
 # Symlinks for opencv to find python
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.py cv.py
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
+
+source ~/.bash_profile
+echo "Your default python is located in `which python`"
 
 # Download DigiPyRo
 popd
