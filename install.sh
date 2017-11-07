@@ -43,3 +43,9 @@ fi
 
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.py cv.py
 ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
+
+# Download DigiPyRo
+if [ ! -d "DigiPyRo" ] ; then
+    git clone https://github.com/sam-may/DigiPyRo
+    git checkout master
+fi
