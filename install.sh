@@ -29,6 +29,7 @@ fi
 # Get openCV
 brew tap homebrew/science
 brew install opencv@2
+brew install pkg-config
 
 echo 'export PATH="/usr/local/opt/opencv@2/bin:$PATH"' >> ~/.bash_profile
 export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:$PKG_CONFIG_PATH"
