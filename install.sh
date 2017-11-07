@@ -17,6 +17,7 @@ if [[ $? != 0 ]] ; then
     # Install python
     brew install python
 fi
+pip install numpy --upgrade
 
 pythonLocation=$(which python)
 pythonDesiredLocation="/usr/local/bin/python"
