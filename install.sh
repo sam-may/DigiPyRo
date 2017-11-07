@@ -40,6 +40,7 @@ brew install opencv@2
 brew install pkg-config
 
 # Next two are bc opencv@2 is a "keg-only" package (i.e. not the most recent version)
+echo 'export PATH="/sbin:$PATH" '>> ~/.bash_profile
 echo 'export PATH="/usr/local/opt/opencv@2/bin:$PATH"' >> ~/.bash_profile
 export PKG_CONFIG_PATH="/usr/local/opt/opencv@2/lib/pkgconfig:$PKG_CONFIG_PATH"
 
@@ -48,17 +49,9 @@ opencvVersion=$(pkg-config --modversion opencv)
 
 cat ~/.bash_profile | grep PYTHONPATH
 
-if [ -f cv.py ] ; then
-    rm cv.py
-fi
-
-if [ -f cv2.so ] ; then
-    rm cv2.so
-fi
-
 # Symlinks for opencv to find python
-ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.py cv.py
-ln -s /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
+ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv.py cv.py
+ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
 
 source ~/.bash_profile
 echo "Your default python is located in `which python`"
