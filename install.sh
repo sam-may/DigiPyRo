@@ -39,6 +39,18 @@ brew tap homebrew/science
 brew install opencv@2
 brew install pkg-config
 
+
+# Check if sysctl is in path
+if ! [ -x "$(command -v sysctl)" ]; then
+  echo "Sysctl not found in path, trying to fix"
+  if [ -d "/sbin" ]; then
+    echo 'export PATH="/sbin:$PATH" '>> ~/.bash_profile
+  fi
+  if [ -d "/usr/sbin" ]; then
+    echo 'export PATH="/usr/sbin:$PATH" '>> ~/.bash_profile
+  fi
+fi
+
 # Next two are bc opencv@2 is a "keg-only" package (i.e. not the most recent version)
 echo 'export PATH="/sbin:$PATH" '>> ~/.bash_profile
 echo 'export PATH="/usr/local/opt/opencv@2/bin:$PATH"' >> ~/.bash_profile
@@ -54,6 +66,12 @@ ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv
 ln -sf /usr/local/Cellar/opencv\@2/$opencvVersion/lib/python2.7/site-packages/cv2.so cv2.so
 
 source ~/.bash_profile
+
+if ! [ -x "$(command -v sysctl)" ]; then
+  echo "Still unable to find systcl :("
+else
+  echo "Successfully found sysctl! :)"
+fi
 
 # Download DigiPyRo
 popd
